@@ -1,0 +1,24 @@
+{
+  "name": "hiv-infection-model",
+  "version": "1.0.0",
+  "description": "A differential equation system solver (mainly index.html), applied on a model of an HIV infection (hiv-model.html)",
+  "main": "jquery.flot.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ricsam/hiv-infection-model.git"
+  },
+  "keywords": [],
+  "author": "Richard Samuelsson <noobtoothfairy@gmail.com> (https://github.com/euhiemf)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ricsam/hiv-infection-model/issues"
+  },
+  "homepage": "https://github.com/ricsam/hiv-infection-model#readme",
+  "devDependencies": {
+    "jest": "^21.2.1",
+    "prettier": "^1.7.4"
+  }
+}

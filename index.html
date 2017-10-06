@@ -3,127 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <title>Document</title>
-  <style>
-    #plot {
-      width: 800px;
-      height: 600px;
-    }
-  </style>
+  <script src='util.js'></script>
 </head>
 <body>
-  <div id="plot" width="800" height="600"></div>
-  <script language="javascript" type="text/javascript" src="jquery.js"></script>
-  <script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+
+  <canvas id='buffer' width="800" height="600"></canvas>
+
   <script>
 
-  function loop(functions, initialValues, options, filterGraph = []) {
-    const funcNames = Object.keys(initialValues),
-          results = [{}];
-
-    const { range, step } = options;
-    let t = range[0];
-
-    results[0]['_time'] = t;
-
-    funcNames.forEach((key) => {
-      results[0][key] = initialValues[key];
-    });
+    setUpData(true);
 
 
-    let index = 0; /* initial values has already been set */
-
-    while (t <= range[1]) {
-
-      t += step;
-      index++;
-
-      results.push({
-        '_time': t
-      });
-
-      funcNames.forEach((key) => {
-        results[index][key] = results[index - 1][key] + functions[`d${key}`](results[index - 1]) * step;
-      });
+    function update() {
 
     }
 
-    const chartData = [];
-    const chartDataMap = {};
+    function render() {
 
-    const colors = ['blue', 'green', 'red', 'orange', 'purple', 'cyan', 'yellow'];
-
-    funcNames.forEach((name, index) => {
-      chartDataMap[name] = index;
-      chartData[index] = {
-        data: [],
-        label: name,
-        yaxis: index + 1,
-        color: colors[index]
-      };
-    });
-
-    for (let i = 0; i < results.length; i++) {
-      for (let u = 0; u < funcNames.length; u++) {
-        const name = funcNames[u];
-        const index = chartDataMap[name];
-        if (filterGraph.indexOf(name) > -1) continue;
-        chartData[index].data.push([
-          results[i]['_time'],
-          results[i][name]
-        ]);
-      }
     }
-    const yaxes = funcNames.map((o, i) => {return {position: 'left', label: 'wef'}});
-    let plot = $.plot('#plot', chartData, {
-      // xaxes: [
-      //   { position: 'bottom' },
-      //   { position: 'top', transform: v => Math.pow(v, 1/5) },
-      // ],
-      yaxes,
-      grid: { color: "#999", hoverable: true}
-    });
-    $.each(plot.getAxes(), function (i, axis) {
-      if (!axis.show)
-        return;
 
-      var box = axis.box;
+    let t = 0; /* days */
+    function tick() {
+      update();
+      render();
 
-      if (axis.direction === 'y') {
+      t++;
+    }
 
-        $("<div class='axisTarget' style='text-align: center;position:absolute; left:" + box.left + "px; top:" + box.top + "px; width:" + box.width +  "px; height:" + box.height + "px'>" + funcNames[axis.n - 1] + "</div>")
-          .data("axis.direction", axis.direction)
-          .data("axis.n", axis.n)
-          .css({ backgroundColor: colors[axis.n - 1], height: '20px'})
-          .appendTo(plot.getPlaceholder())
-          .click(function () {
-            console.log("You clicked the y - " + colors[axis.n - 1] + " axis!")
-        });
-      }
-
-    });
-    return results;
-  }
-
-
-  const yr = 1,
-        xr = 1,
-        X_MAX = 10,
-        Y_MAX = 10;
-
-  const fun = (x, y, CAP) => -x * Math.sign(yr - xr) * (1 - x / CAP) + y * (yr - xr);
-
-  loop({
-    dX: ({Y, X}) => fun(X, Y, Y_MAX),
-    dY: ({Y, X}) => fun(X, Y, X_MAX),
-  }, {
-    Y: 10,
-    X: 10,
-  }, {
-    step: 0.01,
-    range: [0, 15]
-  }, ['X']);
-
-
+    setInterval(tick, 500);
+    
   </script>
+  
 </body>
 </html>
