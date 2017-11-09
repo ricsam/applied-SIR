@@ -1,17 +1,17 @@
-// export const getIndexAt = (rowIndex, colIndex) => {
-//   if (typeof colIndex === 'undefined') {
-//     var { colIndex, rowIndex } = rowIndex;
-//   }
-//   return rowIndex * window.matrixNumCols + colIndex;
-// };
-// export const getRowColAt = index => {
-//   const colIndex = index % window.matrixNumCols;
-//   const rowIndex = (index - colIndex) / window.matrixNumCols;
-//   return {
-//     colIndex,
-//     rowIndex,
-//   };
-// };
+export const getIndexAt = (rowIndex, colIndex) => {
+  if (typeof colIndex === 'undefined') {
+    var { colIndex, rowIndex } = rowIndex;
+  }
+  return rowIndex * window.matrixNumCols + colIndex;
+};
+export const getRowColAt = index => {
+  const colIndex = index % window.matrixNumCols;
+  const rowIndex = (index - colIndex) / window.matrixNumCols;
+  return {
+    colIndex,
+    rowIndex,
+  };
+};
 
 export function randomInt(min, max) {
   min = Math.ceil(min);
