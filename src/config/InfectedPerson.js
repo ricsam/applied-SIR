@@ -1,1 +1,4 @@
-export default class InfectedPerson {}
+import Person from 'GameUnits/Person';
+export default class InfectedPerson extends Person {
+
+}
