@@ -5,7 +5,7 @@
   "main": "./src/index.js",
   "scripts": {
     "test": "jest",
-    "build": "webpack",
+    "build": "webpack && mv dist docs",
     "start": "webpack-dev-server --open"
   },
   "repository": {
