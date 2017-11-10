@@ -1,5 +1,11 @@
 /* timeframe = 1 minute */
 
+const button = document.createElement('button');
+button.innerText = 'Next frame';
+button.addEventListener('click', tick);
+
+document.body.appendChild(button);
+
 const buffer = document.createElement('canvas');
 const width = 800;
 const height = 600;
@@ -90,7 +96,7 @@ function effectFuntion(radius) {
 const bindX = (x) => Math.min(Math.max(x, 0), width);
 const bindY = (y) => Math.min(Math.max(y, 0), height);
 
-function update(xPositions, yPositions, infectionMatrix, immunityMatrix, subways) {
+function update(xPositions, yPositions, infectionMatrix, immunityMatrix) {
 
 
 
@@ -201,7 +207,7 @@ function update(xPositions, yPositions, infectionMatrix, immunityMatrix, subways
     }
   }
 
-  return [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newSubways];
+  return [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix];
 
 }
 function render(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix) {
