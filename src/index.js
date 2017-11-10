@@ -4,9 +4,11 @@ const buffer = document.createElement('canvas');
 const width = 800;
 const height = 600;
 const maxSpeed = 3;
-const diseaseRadius = 3;
+const diseaseRadius = 10;
 const baseInfectionDuration = 180;
 const baseImmunityDuration = 360;
+const personRadius = 3;
+const numberOfPeople = 1200;
 
 buffer.width = width;
 buffer.height = height;
@@ -15,33 +17,62 @@ document.body.appendChild(buffer);
 
 const ctx = buffer.getContext('2d');
 
-const xPositions = [];
-const yPositions = [];
-const immunityMatrix = []; // time ticking, of beeing immune
-const infectionMatrix = []; // time ticking down, of infection
-const personRadius = 3;
+function getInitialFrame() {
+  const xPositions = [];
+  const yPositions = [];
+  const immunityMatrix = []; // time ticking, of beeing immune
+  const infectionMatrix = []; // time ticking down, of infection
 
-const numberOfPeople = 1200;
+  for (let i = 0; i <= numberOfPeople; i++) {
+    xPositions.push(getRandomArbitrary(0, width));
+    yPositions.push(getRandomArbitrary(0, height));
+    immunityMatrix.push(0);
+    infectionMatrix.push(0);
+  }
+
+  /* push one infected */
+  xPositions.push(getRandomArbitrary(0, width));
+  yPositions.push(getRandomArbitrary(0, height));
+  immunityMatrix.push(0);
+  infectionMatrix.push(baseInfectionDuration);
+
+  xPositions.push(getRandomArbitrary(0, width));
+  yPositions.push(getRandomArbitrary(0, height));
+  immunityMatrix.push(0);
+  infectionMatrix.push(baseInfectionDuration);
+
+  xPositions.push(getRandomArbitrary(0, width));
+  yPositions.push(getRandomArbitrary(0, height));
+  immunityMatrix.push(0);
+  infectionMatrix.push(baseInfectionDuration);
+
+  xPositions.push(getRandomArbitrary(0, width));
+  yPositions.push(getRandomArbitrary(0, height));
+  immunityMatrix.push(0);
+  infectionMatrix.push(baseInfectionDuration);
+
+  const subwayPositions = [0, 1];
+
+
+  return [xPositions, yPositions, infectionMatrix, immunityMatrix, subwayPositions];
+}
+const subways = [
+  {
+    x: 50,
+    y: 50,
+    r: 25
+  },
+  {
+    x: 150,
+    y: 150,
+    r: 50
+  }
+];
+
 
 function getRandomArbitrary(min, max) {
   return Math.random() * (max - min) + min;
 }
-
-const infectionTimeRange = [];
-
-for (let i = 0; i <= numberOfPeople; i++) {
-  xPositions.push(getRandomArbitrary(0, width));
-  yPositions.push(getRandomArbitrary(0, height));
-  immunityMatrix.push(0);
-  infectionMatrix.push(0);
-}
-
-/* push one infected */
-xPositions.push(getRandomArbitrary(0, width));
-yPositions.push(getRandomArbitrary(0, height));
-immunityMatrix.push(0);
-infectionMatrix.push(baseInfectionDuration);
-
 
 function effectFuntion(radius) {
   if (radius === 0) {
@@ -51,21 +82,17 @@ function effectFuntion(radius) {
     return 1;
   }
 
-  return radius / (diseaseRadius + personRadius);
+  return 0.1 * (radius / (diseaseRadius + personRadius));
 }
 
-const subways = [
-  {
-    x: 50,
-    y: 50,
-    r: 25
-  }
-];
+
 
 const bindX = (x) => Math.min(Math.max(x, 0), width);
 const bindY = (y) => Math.min(Math.max(y, 0), height);
 
-function update() {
+function update(xPositions, yPositions, infectionMatrix, immunityMatrix, subways) {
+
+
 
   const newXPositions = [];
   const newYPositions = [];
@@ -74,30 +101,30 @@ function update() {
   for (let i = 0; i < xPositions.length; i++) {
     const x = xPositions[i];
     const y = yPositions[i];
+    let isPredetermied = false;
     for (let k = 0; k < subways.length; k++) {
       const subway = subways[k];
       if (Math.sqrt((subway.x - x)**2 + (subway.y - y)**2) < subway.r + personRadius) {
 
-        let angle = Math.atan2( Math.abs(subway.y - y), Math.abs(subway.x - x) );
-        if (y >= subway.y && x >= subway.x) angle += Math.PI / 2; /* move in negative x, move positive y */
-        if (y >= subway.y && x < subway.x) angle += 0; /* move in positive x, positive y*/
-        if (y < subway.y && x < subway.x) angle += Math.PI * 3/4; /* positive x, negative y*/
-        if (y < subway.y && x >= subway.x) angle += Math.PI; /* negative x, negative y*/
+        let angle = Math.atan2( Math.abs(subway.y - y),  Math.abs(subway.x - x) );
+        if (y >= subway.y && x >= subway.x) angle += Math.PI; /* move in negative x, move negative y */
+        if (y >= subway.y && x < subway.x) angle += Math.PI * 3/4; /* move in positive x, negative y*/
+        if (y < subway.y && x < subway.x) angle += 0; /* positive x, positive y*/
+        if (y < subway.y && x >= subway.x) angle += Math.PI / 2; /* negative x, positive y*/
 
-        newXPositions[i] = bindX(maxSpeed * Math.cos(angle) + xPositions[i]);
-        newYPositions[i] = bindY(maxSpeed * Math.sin(angle) + yPositions[i]);
-      } else {
-        randomMovementMatrix.push(i);
+
+        newXPositions[i] = bindX(maxSpeed * Math.cos(angle) + x);
+        newYPositions[i] = bindY(maxSpeed * Math.sin(angle) + y);
+        isPredetermied = true;
+        // console.log(x, y);
       }
     }
-  }
-
-  for (let i = 0; i < randomMovementMatrix.length; i++) {
-    const angle = getRandomArbitrary(0, 2 * Math.PI);
-    const speed = getRandomArbitrary(0, maxSpeed);
-    const index = randomMovementMatrix[i];
-    newXPositions[index] = bindX(speed * Math.cos(angle) + xPositions[i]);
-    newYPositions[index] = bindY(speed * Math.sin(angle) + yPositions[i]);
+    if ( ! isPredetermied ) {
+      const angle = getRandomArbitrary(0, 2*Math.PI);
+      const speed = getRandomArbitrary(0, maxSpeed);
+      newXPositions[i] = bindX(speed * Math.cos(angle) + x);
+      newYPositions[i] = bindY(speed * Math.sin(angle) + y);
+    }
   }
 
   const newImmunityMatrix = [];
@@ -139,7 +166,7 @@ function update() {
         }
         const x = newXPositions[i];
         const y = newYPositions[i];
-        const distance = Math.sqrt((x - rootX)**2, (y - rootY)**2);
+        const distance = Math.sqrt((x - rootX)**2 + (y - rootY)**2);
 
         if (distance < diseaseRadius + personRadius) {
           let alreadyMightInfected = false;
@@ -160,7 +187,6 @@ function update() {
     }
   }
 
-  console.log(mightGetInfected);
   for (let i = 0; i < mightGetInfected.length; i++) {
     const { index, distances } = mightGetInfected[i];
     const negativeProbs = distances.map(effectFuntion).map(o => 1 - o);
@@ -175,17 +201,51 @@ function update() {
     }
   }
 
-  console.log(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix);
+  return [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newSubways];
 
 }
-function render() {
+function render(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix) {
+  ctx.clearRect(0, 0, width, height);
+  for (let i = 0; i < newXPositions.length; i++) {
+    const x = newXPositions[i];
+    const y = newYPositions[i];
+    ctx.beginPath();
+    ctx.arc(x, y, personRadius, 0, 2 * Math.PI, false);
+    ctx.strokeStyle = 'black';
+    ctx.stroke();
 
+    if (newInfectionMatrix[i]) {
+      ctx.fillStyle = 'red';
+      ctx.fill();
+    }
+    if (newImmunityMatrix[i]) {
+      ctx.fillStyle = 'purple';
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(x, y, diseaseRadius, 0, 2 * Math.PI, false);
+    ctx.strokeStyle = 'blue';
+    ctx.stroke();
+
+  }
+  for (let k = 0; k < subways.length; k++) {
+    const {x, y, r} = subways[k];
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 2 * Math.PI, false);
+    ctx.strokeStyle = 'green';
+    ctx.stroke();
+  }
 }
-tick();
 // let time = new Date();
+let args = getInitialFrame();
+render(...args);
+
 function tick() {
-  update();
-  render();
+  args = update(...args);
+  render(...args);
   // window.requestAnimationFrame(tick);
 }
+
+window.tick = tick;
 
