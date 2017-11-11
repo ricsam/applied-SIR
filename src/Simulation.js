@@ -14,19 +14,26 @@ export default class Simulation {
     this.personRadius = _config.personRadius;
     this.numberOfPeople = _config.numberOfPeople;
     this.subways = _config.subways;
+
+    this.probabilityOfBecommingImmuneElseDie = 0.8;
+    this.trainDepartureInterval = 40;
   }
 
-  getInitialFrame() {
+  getInitialFrame = () => {
     const xPositions = [];
     const yPositions = [];
     const immunityMatrix = []; // time ticking, of beeing immune
     const infectionMatrix = []; // time ticking down, of infection
+    const deathMatrix = [];
+    const inversedPredetermied = [];
 
     for (let i = 0; i <= this.numberOfPeople; i += 1) {
       xPositions.push(getRandomArbitrary(0, this.width));
       yPositions.push(getRandomArbitrary(0, this.height));
       immunityMatrix.push(0);
       infectionMatrix.push(0);
+      deathMatrix.push(false);
+      inversedPredetermied.push(0);
     }
 
     /* push one infected */
@@ -34,30 +41,38 @@ export default class Simulation {
     yPositions.push(getRandomArbitrary(0, this.height));
     immunityMatrix.push(0);
     infectionMatrix.push(this.baseInfectionDuration);
+    deathMatrix.push(false);
+    inversedPredetermied.push(0);
 
     xPositions.push(getRandomArbitrary(0, this.width));
     yPositions.push(getRandomArbitrary(0, this.height));
     immunityMatrix.push(0);
     infectionMatrix.push(this.baseInfectionDuration);
+    deathMatrix.push(false);
+    inversedPredetermied.push(0);
 
     xPositions.push(getRandomArbitrary(0, this.width));
     yPositions.push(getRandomArbitrary(0, this.height));
     immunityMatrix.push(0);
     infectionMatrix.push(this.baseInfectionDuration);
+    deathMatrix.push(false);
+    inversedPredetermied.push(0);
 
     xPositions.push(getRandomArbitrary(0, this.width));
     yPositions.push(getRandomArbitrary(0, this.height));
     immunityMatrix.push(0);
     infectionMatrix.push(this.baseInfectionDuration);
-
-    const subwayPositions = [0, 1];
+    deathMatrix.push(false);
+    inversedPredetermied.push(0);
 
     return [
       xPositions,
       yPositions,
       infectionMatrix,
       immunityMatrix,
-      subwayPositions,
+      deathMatrix,
+      this.trainDepartureInterval,
+      inversedPredetermied,
     ];
   }
 
@@ -69,17 +84,27 @@ export default class Simulation {
       return 1;
     }
 
-    return 0.1 * (radius / (this.diseaseRadius + this.personRadius));
+    return 1 * (radius / (this.diseaseRadius + this.personRadius));
   };
 
   bindX = x => Math.min(Math.max(x, 0), this.width);
   bindY = y => Math.min(Math.max(y, 0), this.height);
 
-  update(xPositions, yPositions, infectionMatrix, immunityMatrix) {
+  update(xPositions, yPositions, infectionMatrix, immunityMatrix, deathMatrix, trainDepartureCountdown, inversedPredetermied) {
     const newXPositions = [];
     const newYPositions = [];
+    const newDeathMatrix = deathMatrix.slice(0);
+    const newInversedPredetermied = inversedPredetermied.slice(0);
+
+    let newTrainDepartureCountdown = trainDepartureCountdown - 1;
 
     for (let i = 0; i < xPositions.length; i += 1) {
+      if (newDeathMatrix[i]) {
+        newXPositions[i] = xPositions[i];
+        newYPositions[i] = yPositions[i];
+        continue; // eslint-disable-line no-continue
+      }
+
       const x = xPositions[i];
       const y = yPositions[i];
       let isPredetermied = false;
@@ -89,22 +114,49 @@ export default class Simulation {
           Math.sqrt((subway.x - x) ** 2 + (subway.y - y) ** 2) <
           subway.r + this.personRadius
         ) {
+
+          if (newTrainDepartureCountdown === 0) {
+            // translate to next station
+
+            const nextStationIndex = k < this.subways.length - 1 ? k + 1 : 0;
+            const nextStation = this.subways[nextStationIndex];
+            const translateX = nextStation.x - subway.x;
+            const translateY = nextStation.y - subway.y;
+
+
+            newXPositions[i] = this.bindX(translateX + x);
+            newYPositions[i] = this.bindY(translateY + y);
+            isPredetermied = true;
+
+            newInversedPredetermied[i] = 40;
+
+            continue; // eslint-disable-line no-continue
+          }
+
+
           let angle = Math.atan2(
             Math.abs(subway.y - y),
             Math.abs(subway.x - x)
           );
+          /* move in negative x, move negative y */
           if (y >= subway.y && x >= subway.x) {
             angle += Math.PI;
-          } /* move in negative x, move negative y */
+          }
+          /* move in positive x, negative y */
           if (y >= subway.y && x < subway.x) {
-            angle += Math.PI * 3 / 4;
-          } /* move in positive x, negative y */
+            angle += Math.PI + Math.PI / 2;
+          }
           if (y < subway.y && x < subway.x) {
             angle += 0;
           } /* positive x, positive y */
           if (y < subway.y && x >= subway.x) {
             angle += Math.PI / 2;
           } /* negative x, positive y */
+
+          if (inversedPredetermied[i] > 0) {
+            newInversedPredetermied[i] = inversedPredetermied[i] - 1;
+            angle += Math.PI;
+          }
 
           newXPositions[i] = this.bindX(this.maxSpeed * Math.cos(angle) + x);
           newYPositions[i] = this.bindY(this.maxSpeed * Math.sin(angle) + y);
@@ -129,10 +181,15 @@ export default class Simulation {
       }
     }
 
+    if (newTrainDepartureCountdown === 0) {
+      newTrainDepartureCountdown = this.trainDepartureInterval;
+    }
+
     // console.log(newXPositions, newYPositions);
 
     const mightGetInfected = [];
     const newInfectionMatrix = [];
+    /* copy death matrix */
 
     for (let u = 0; u < infectionMatrix.length; u += 1) {
       const rootX = newXPositions[u];
@@ -140,7 +197,12 @@ export default class Simulation {
 
       /* special case as someone will become non-infeced after this */
       if (infectionMatrix[u] === 1) {
-        newImmunityMatrix[u] = this.baseImmunityDuration;
+        const probability = getRandomArbitrary(0, 1);
+        if (probability <= this.probabilityOfBecommingImmuneElseDie) {
+          newImmunityMatrix[u] = this.baseImmunityDuration;
+        } else {
+          newDeathMatrix[u] = true;
+        }
       }
 
       /* update the infection matrix */
@@ -150,9 +212,9 @@ export default class Simulation {
         newInfectionMatrix[u] = infectionMatrix[u];
       }
 
-      if (newInfectionMatrix[u] !== 0) {
+      if (newInfectionMatrix[u] !== 0 && newDeathMatrix[u] !== true) {
         for (let i = 0; i < newXPositions.length; i += 1) {
-          if (i === u || newImmunityMatrix[i] > 0) {
+          if (i === u || newImmunityMatrix[i] > 0 || newDeathMatrix[i]) {
             continue; // eslint-disable-line no-continue
           }
           const x = newXPositions[i];
@@ -197,10 +259,13 @@ export default class Simulation {
       newYPositions,
       newInfectionMatrix,
       newImmunityMatrix,
+      newDeathMatrix,
+      newTrainDepartureCountdown,
+      newInversedPredetermied,
     ];
   }
 
-  render(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix) {
+  render(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix) {
     this.ctx.clearRect(0, 0, this.width, this.height);
     for (let i = 0; i < newXPositions.length; i += 1) {
       const x = newXPositions[i];
@@ -216,6 +281,10 @@ export default class Simulation {
       }
       if (newImmunityMatrix[i]) {
         this.ctx.fillStyle = 'purple';
+        this.ctx.fill();
+      }
+      if (newDeathMatrix[i]) {
+        this.ctx.fillStyle = 'black';
         this.ctx.fill();
       }
 

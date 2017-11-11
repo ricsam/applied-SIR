@@ -4,8 +4,8 @@ import PropTypes from 'prop-types';
 import Draggable from 'react-draggable';
 import uuid from 'uuid/v4';
 import styled from 'styled-components';
+import { GithubPicker } from 'react-color';
 import Simulation from './Simulation';
-import SIR from './SIR';
 
 document.addEventListener('dragstart', ev => {
   ev.preventDefault();
@@ -21,32 +21,30 @@ const simulation = new Simulation({
   height: 600,
   maxSpeed: 3,
   diseaseRadius: 10,
-  baseInfectionDuration: 180,
+  baseInfectionDuration: 5,
   baseImmunityDuration: 360,
   personRadius: 3,
   numberOfPeople: 1200,
   subways: [
     {
-      x: 50,
-      y: 50,
-      r: 25,
+      x: 200,
+      y: 300,
+      r: 100,
     },
     {
-      x: 150,
-      y: 150,
-      r: 50,
+      x: 600,
+      y: 300,
+      r: 100,
     },
   ],
 });
 
-const sir = new SIR();
-
 const Rect = styled.div`
   width: ${({ width: w }) => w}px;
   height: ${({ height: h }) => h}px;
-  border: 5px solid black;
+  border: 5px solid ${({ color }) => color};
   box-sizing: border-box;
-  ${({ focus }) => focus && 'background: rgba(255, 255, 255, 0.5);'}
+  ${({ focus }) => focus && 'background: rgba(255, 255, 255, 0.5);'};
 `;
 
 // let time = new Date();
@@ -68,15 +66,23 @@ const Button = styled.div`
 `;
 
 const ControlerWrapper = styled.div`
-  ${({ focus }) => focus && 'background: rgba(255, 255, 255, 0.5);'}
-  `;
+  ${({ focus }) => focus && 'background: rgba(255, 255, 255, 0.5);'};
+`;
 
 class ControlRow extends React.PureComponent {
   static propTypes = {
     focus: PropTypes.bool,
+    viewColorPicker: PropTypes.func,
+  };
+  open = () => {
+    this.props.viewColorPicker(this.props.id);
   };
   render() {
-    return <ControlerWrapper focus={this.props.focus}>wef</ControlerWrapper>;
+    return (
+      <ControlerWrapper focus={this.props.focus}>
+        <Button onClick={this.open}>Change color</Button>
+      </ControlerWrapper>
+    );
   }
 }
 
@@ -87,9 +93,10 @@ const AbsolutPsed = styled.div`
   z-index: 1;
   height: 0;
   width: 0;
-  ${({ focus }) => focus && 'z-index: 2;'}
+  ${({ focus }) => focus && 'z-index: 2;'};
 `;
 
+// eslint-diable-next-line
 class DragableSIRSampleArea extends React.PureComponent {
   static propTypes = {
     onStop: PropTypes.func,
@@ -99,7 +106,7 @@ class DragableSIRSampleArea extends React.PureComponent {
     height: PropTypes.number,
     bounds: PropTypes.object,
     focus: PropTypes.bool,
-
+    color: PropTypes.string,
   };
   onStop = (_, { x, y }) => {
     this.props.onStop(this.props.id, x, y);
@@ -124,7 +131,7 @@ class DragableSIRSampleArea extends React.PureComponent {
             bottom: bounds.y - h,
           }}
         >
-          <Rect width={w} height={h} focus={focus} />
+          <Rect width={w} height={h} focus={focus} color={this.props.color} />
         </Draggable>
       </AbsolutPsed>
     );
@@ -140,18 +147,70 @@ class App extends React.PureComponent {
     sirGraphHeight: 300,
     sirs: {},
     sirSquareFocus: null,
+    playLive: false,
+    colorPicker: false,
   };
+
   componentDidMount() {
     this.frames[0] = simulation.getInitialFrame();
     this.renderCanvas(...this.frames[0]);
+    this.initializeTicks();
   }
+
+  SIR = {
+    alpha: 0.1,
+    tau: 20,
+    mu: 0.1,
+    omega: 0.1,
+    starts: {
+      S: 1200,
+      I: 3,
+      R: 0,
+      D: 0,
+    },
+  };
+
+  initializeTicks = () => {
+    if (this.state.playLive) {
+      this.tick();
+    }
+    window.requestAnimationFrame(this.initializeTicks);
+  };
   frames = [];
   tick() {
     this.frames[this.frames.length] = simulation.update(...this.frames[this.frames.length - 1]);
     this.renderCanvas();
+    // this.renderSIR();
   }
-  dragStopped = (_, { x, y }) => {
-    this.renderSir(x, y);
+
+  renderSIR = () => {
+    this.graphBuffer.clearRect(0, 0, this.state.sirGraphWidth, this.state.sirGraphHeight);
+    for (let k = 0; k < this.frames.length; k++) {
+      const frame = this.frames[k];
+      const frameSuceptible = [];
+      const frameInfected = [];
+      const framePeople = [];
+      const frameDead = [];
+      const frameRecovered = [];
+
+      for (let i = 0; i < frame[0].length; i++) {
+        const x = frame[0][i];
+        const y = frame[1][i];
+        if (x >= frame.x && x <= frame.x + frame.width && y >= frame.y && y <= frame.y + frame.height) {
+          framePeople.push(i);
+          if (frame[2][i]) { /* infectionMatrix */
+            frameInfected.push(i);
+          } else if (frame[3][i]) { /* immunityMatrix */
+            frameRecovered.push(i);
+          } else if (frame[4][i]) { /* deathMatrix */
+            frameDead.push(i);
+          } else {
+            frameSuceptible.push(i);
+          }
+        }
+      }
+    }
+    // this.graphBuffer.
   };
 
   addSIR = () => {
@@ -160,7 +219,7 @@ class App extends React.PureComponent {
       sirs: {
         ...prevState.sirs,
         [id]: {
-          color: 'black',
+          color: '#000000',
           width: 300,
           height: 300,
           x: 0,
@@ -188,31 +247,68 @@ class App extends React.PureComponent {
     this.setState({
       sirSquareFocus: id,
     });
-  }
+  };
+  togglePlay = () => {
+    this.setState(prevState => ({
+      playLive: !prevState.playLive,
+    }));
+  };
 
-  renderNextFrame = () => {
-    this.tick();
+  openColorPicker = id => {
+    this.setState({
+      colorPicker: id,
+    });
+  };
+  closeColorPicker = color => {
+    this.setState(prevState => ({
+      sirs: {
+        ...prevState.sirs,
+        [prevState.colorPicker]: {
+          ...prevState.sirs[prevState.colorPicker],
+          color: color.hex,
+        },
+      },
+      colorPicker: false,
+    }));
   };
   renderCanvas() {
     simulation.setContext(this.simulationBuffer);
     simulation.render(...this.frames[this.frames.length - 1]);
   }
-  renderSir(x, y) {
-    sir.setContext(this.simulationBuffer);
-    sir.render(...this.frames[this.frames.length - 1], x, y);
-  }
+  renderNextFrame = () => {
+    this.tick();
+  };
   render() {
     return (
       <div>
         <canvas
           ref={el => {
-            if (!this.simulationBuffer) { this.simulationBuffer = el.getContext('2d'); }
+            if (!this.simulationBuffer) {
+              this.simulationBuffer = el.getContext('2d');
+            }
           }}
           width={this.state.width}
           height={this.state.height}
         />
+        <button onClick={this.togglePlay}>
+          {this.state.playLive ? 'pause' : 'play'}
+        </button>
+        <button onClick={this.renderNextFrame}>Next frame</button>
+        {this.state.colorPicker && (
+          <GithubPicker
+            color={this.state.sirs[this.state.colorPicker].color}
+            onChangeComplete={this.closeColorPicker}
+          />
+        )}
         <Controls width={this.state.width}>
-          {Object.keys(this.state.sirs).map(id => <ControlRow key={id} focus={this.state.sirSquareFocus === id} />)}
+          {Object.keys(this.state.sirs).map(id => (
+            <ControlRow
+              key={id}
+              id={id}
+              focus={this.state.sirSquareFocus === id}
+              viewColorPicker={this.openColorPicker}
+            />
+          ))}
           <div>
             <Button onClick={this.addSIR}>Add SIR graph</Button>
           </div>
@@ -224,7 +320,6 @@ class App extends React.PureComponent {
           width={this.state.sirGraphWidth}
           height={this.state.sirGraphHeight}
         />
-        <button onClick={this.renderNextFrame}>Next frame</button>
         {Object.keys(this.state.sirs).map(id => (
           <DragableSIRSampleArea
             onStop={this.updateSIR}
@@ -235,6 +330,7 @@ class App extends React.PureComponent {
             bounds={{ x: this.state.width, y: this.state.height }}
             focus={this.state.sirSquareFocus === id}
             onStart={this.focus}
+            color={this.state.sirs[id].color}
           />
         ))}
       </div>

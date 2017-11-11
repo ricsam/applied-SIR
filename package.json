@@ -118,6 +118,7 @@
     "eslint-plugin-react": "^7.4.0",
     "immutable": "^3.8.2",
     "react": "^16.1.0",
+    "react-color": "^2.13.8",
     "react-dom": "^16.1.0",
     "react-draggable": "^3.0.3",
     "styled-components": "^2.2.3",

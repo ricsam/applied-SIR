@@ -8,7 +8,7 @@ module.exports = {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'docs'),
   },
-  devtool: 'inline-source-map',
+  devtool: 'eval',
   devServer: {
     contentBase: './docs',
   },
