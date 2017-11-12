@@ -275,10 +275,6 @@ export default class Simulation {
       this.ctx.strokeStyle = 'black';
       this.ctx.stroke();
 
-      if (newInfectionMatrix[i]) {
-        this.ctx.fillStyle = 'red';
-        this.ctx.fill();
-      }
       if (newImmunityMatrix[i]) {
         this.ctx.fillStyle = 'purple';
         this.ctx.fill();
@@ -288,10 +284,15 @@ export default class Simulation {
         this.ctx.fill();
       }
 
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, this.diseaseRadius, 0, 2 * Math.PI, false);
-      this.ctx.strokeStyle = 'blue';
-      this.ctx.stroke();
+      if (newInfectionMatrix[i]) {
+        this.ctx.fillStyle = 'red';
+        this.ctx.fill();
+
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, this.diseaseRadius, 0, 2 * Math.PI, false);
+        this.ctx.strokeStyle = 'blue';
+        this.ctx.stroke();
+      }
     }
     for (let k = 0; k < this.subways.length; k += 1) {
       const { x, y, r } = this.subways[k];
