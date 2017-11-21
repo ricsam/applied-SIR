@@ -73,6 +73,7 @@ class ControlRow extends React.PureComponent {
   static propTypes = {
     focus: PropTypes.bool,
     viewColorPicker: PropTypes.func,
+    id: PropTypes.string,
   };
   open = () => {
     this.props.viewColorPicker(this.props.id);
@@ -96,7 +97,7 @@ const AbsolutPsed = styled.div`
   ${({ focus }) => focus && 'z-index: 2;'};
 `;
 
-// eslint-diable-next-line
+// eslint-disable-next-line
 class DragableSIRSampleArea extends React.PureComponent {
   static propTypes = {
     onStop: PropTypes.func,
@@ -183,35 +184,6 @@ class App extends React.PureComponent {
     // this.renderSIR();
   }
 
-  renderSIR = () => {
-    this.graphBuffer.clearRect(0, 0, this.state.sirGraphWidth, this.state.sirGraphHeight);
-    for (let k = 0; k < this.frames.length; k++) {
-      const frame = this.frames[k];
-      const frameSuceptible = [];
-      const frameInfected = [];
-      const framePeople = [];
-      const frameDead = [];
-      const frameRecovered = [];
-
-      for (let i = 0; i < frame[0].length; i++) {
-        const x = frame[0][i];
-        const y = frame[1][i];
-        if (x >= frame.x && x <= frame.x + frame.width && y >= frame.y && y <= frame.y + frame.height) {
-          framePeople.push(i);
-          if (frame[2][i]) { /* infectionMatrix */
-            frameInfected.push(i);
-          } else if (frame[3][i]) { /* immunityMatrix */
-            frameRecovered.push(i);
-          } else if (frame[4][i]) { /* deathMatrix */
-            frameDead.push(i);
-          } else {
-            frameSuceptible.push(i);
-          }
-        }
-      }
-    }
-    // this.graphBuffer.
-  };
 
   addSIR = () => {
     const id = uuid();
@@ -270,6 +242,35 @@ class App extends React.PureComponent {
       },
       colorPicker: false,
     }));
+  };
+  renderSIR = () => {
+    this.graphBuffer.clearRect(0, 0, this.state.sirGraphWidth, this.state.sirGraphHeight);
+    for (let k = 0; k < this.frames.length; k += 1) {
+      const frame = this.frames[k];
+      const frameSuceptible = [];
+      const frameInfected = [];
+      const framePeople = [];
+      const frameDead = [];
+      const frameRecovered = [];
+
+      for (let i = 0; i < frame[0].length; i += 1) {
+        const x = frame[0][i];
+        const y = frame[1][i];
+        if (x >= frame.x && x <= frame.x + frame.width && y >= frame.y && y <= frame.y + frame.height) {
+          framePeople.push(i);
+          if (frame[2][i]) { /* infectionMatrix */
+            frameInfected.push(i);
+          } else if (frame[3][i]) { /* immunityMatrix */
+            frameRecovered.push(i);
+          } else if (frame[4][i]) { /* deathMatrix */
+            frameDead.push(i);
+          } else {
+            frameSuceptible.push(i);
+          }
+        }
+      }
+    }
+    // this.graphBuffer.
   };
   renderCanvas() {
     simulation.setContext(this.simulationBuffer);

@@ -114,7 +114,6 @@ export default class Simulation {
           Math.sqrt((subway.x - x) ** 2 + (subway.y - y) ** 2) <
           subway.r + this.personRadius
         ) {
-
           if (newTrainDepartureCountdown === 0) {
             // translate to next station
 
