@@ -90,139 +90,158 @@ function cb = update(xPositions, yPositions, infectionMatrix, immunityMatrix, de
 
   xPositions_length = size(xPositions, 2);
   for i = 1:xPositions_length
-    if newDeathMatrix(i) {
-      newXPositions[i] = xPositions[i];
-      newYPositions[i] = yPositions[i];
-      continue; # eslint-disable-line no-continue
-    }
+    if newDeathMatrix(i)
+      newXPositions(i) = xPositions(i);
+      newYPositions(i) = yPositions(i);
+      continue;
+    end
 
-    const x = xPositions[i];
-    const y = yPositions[i];
-    let isPredetermied = false;
-    for (let k = 0; k < this.subways.length; k += 1) {
-      const subway = this.subways[k];
-      if (
-        Math.sqrt((subway.x - x) ** 2 + (subway.y - y) ** 2) <
-        subway.r + this_personRadius
-      ) {
-        if (newTrainDepartureCountdown == 0) {
-          # translate to next station
+    x = xPositions(i);
+    y = yPositions(i);
+    isPredetermied = false;
+    for k = 1:size(this_subways, 2)
+      subway = this_subways(k);
 
-          const nextStationIndex = k < this.subways.length - 1 ? k + 1 : 0;
-          const nextStation = this.subways[nextStationIndex];
-          const translateX = nextStation.x - subway.x;
-          const translateY = nextStation.y - subway.y;
+      subway_r = this_subways_r(subway)
+      subway_x = this_subways_x(subway)
+      subway_y = this_subways_y(subway)
+
+      if sqrt((subway_x - x)^2 + (subway_y - y)^2) < subway_r + this_personRadius
+        if newTrainDepartureCountdown == 0
+          % translate to next station
+
+          if k < size(this_subways, 2)
+            nextStationIndex = k + 1;
+          else
+            nextStationIndex = 1;
+          end
+
+          nextStation = this_subways(nextStationIndex);
+
+          nextStation_x = this_subways_x(nextStation)
+          nextStation_y = this_subways_y(nextStation)
+          nextStation_r = this_subways_r(nextStation)
+
+          translateX = nextStation_x - subway_x;
+          translateY = nextStation_y - subway_y;
 
 
-          newXPositions[i] = this.bindX(translateX + x);
-          newYPositions[i] = this.bindY(translateY + y);
+          newXPositions(i) = bindX(translateX + x);
+          newYPositions(i) = bindY(translateY + y);
           isPredetermied = true;
 
-          newInversedPredetermied[i] = 40;
+          newInversedPredetermied(i) = 40;
 
-          continue; # eslint-disable-line no-continue
-        }
+          continue; % eslint-disable-line no-continue
+        end
 
 
-        let angle = Math.atan2(
-          Math.abs(subway.y - y),
-          Math.abs(subway.x - x)
-        );
-        # move in negative x, move negative y */
-        if (y >= subway.y && x >= subway.x) {
-          angle += Math.PI;
-        }
-        # move in positive x, negative y */
-        if (y >= subway.y && x < subway.x) {
-          angle += Math.PI + Math.PI / 2;
-        }
-        if (y < subway.y && x < subway.x) {
-          angle += 0;
-        } # positive x, positive y */
-        if (y < subway.y && x >= subway.x) {
-          angle += Math.PI / 2;
-        } # negative x, positive y */
+        winkel = atan(abs(subway.y - y) / abs(subway.x - x));
 
-        if (inversedPredetermied[i] > 0) {
-          newInversedPredetermied[i] = inversedPredetermied[i] - 1;
-          angle += Math.PI;
-        }
+        % move in negative x, move negative y */
+        if y >= subway_y && x >= subway_x
+          winkel = winkel + pi;
+        end
+        % move in positive x, negative y */
+        if y >= subway.y && x < subway.x
+          winkel = winkel + pi + pi / 2;
+        end
 
-        newXPositions[i] = this.bindX(this.maxSpeed * Math.cos(angle) + x);
-        newYPositions[i] = this.bindY(this.maxSpeed * Math.sin(angle) + y);
+        % positive x, positive y */
+        if y < subway.y && x < subway.x
+          winkel = winkel + 0;
+        end
+
+        % negative x, positive y */
+        if y < subway.y && x >= subway.x
+          winkel = winkel + pi / 2;
+        end
+
+        if inversedPredetermied(i) > 0
+          newInversedPredetermied(i) = inversedPredetermied(i) - 1;
+          winkel = winkel + pi;
+        end
+
+        newXPositions(i) = bindX(this_maxSpeed * cos(winkel) + x);
+        newYPositions(i) = bindY(this_maxSpeed * sin(winkel) + y);
         isPredetermied = true;
-        # console.log(x, y);
-      }
-    }
-    if (!isPredetermied) {
-      const angle = getRandomArbitrary(0, 2 * Math.PI);
-      const speed = getRandomArbitrary(0, this.maxSpeed);
-      newXPositions[i] = this.bindX(speed * Math.cos(angle) + x);
-      newYPositions[i] = this.bindY(speed * Math.sin(angle) + y);
-    }
+      end
+    end
+    if ~isPredetermied
+      winkel = getRandomArbitrary(0, 2 * pi);
+      speed = getRandomArbitrary(0, this_maxSpeed);
+      newXPositions(i) = bindX(speed * cos(winkel) + x);
+      newYPositions(i) = bindY(speed * sin(winkel) + y);
+    end
   end
 
-  const newImmunityMatrix = [];
-  for (let i = 0; i < immunityMatrix.length; i += 1) {
-    if (immunityMatrix[i] > 0) {
-      newImmunityMatrix[i] = immunityMatrix[i] - 1;
-    } else {
-      newImmunityMatrix[i] = immunityMatrix[i];
-    }
-  }
+  newImmunityMatrix = [];
+  for i = 1:size(immunityMatrix, 2)
+    if immunityMatrix(i) > 0
+      newImmunityMatrix(i) = immunityMatrix(i) - 1;
+    else
+      newImmunityMatrix(i) = immunityMatrix(i);
+    end
+  end
 
-  if (newTrainDepartureCountdown == 0) {
-    newTrainDepartureCountdown = this.trainDepartureInterval;
-  }
+  if newTrainDepartureCountdown == 0
+    newTrainDepartureCountdown = this_trainDepartureInterval
+  end
 
-  # console.log(newXPositions, newYPositions);
+  % console.log(newXPositions, newYPositions);
 
-  const mightGetInfected = [];
-  const newInfectionMatrix = [];
-  # copy death matrix */
+  mightGetInfected = [];
+  mightGetInfected_index = [];
+  mightGetInfected_distances = [];
+  newInfectionMatrix = [];
 
-  for (let u = 0; u < infectionMatrix.length; u += 1) {
-    const rootX = newXPositions[u];
-    const rootY = newYPositions[u];
+  % copy death matrix */
+  for u = 1:size(infectionMatrix, 2)
+    rootX = newXPositions(u);
+    rootY = newYPositions(u);
 
-    # special case as someone will become non-infeced after this */
-    if (infectionMatrix[u] == 1) {
-      const probability = getRandomArbitrary(0, 1);
-      if (probability <= this.probabilityOfBecommingImmuneElseDie) {
-        newImmunityMatrix[u] = this.baseImmunityDuration;
-      } else {
-        newDeathMatrix[u] = true;
-      }
-    }
+    % special case as someone will become non-infeced after this */
+    if infectionMatrix(u) == 1
+      probability = getRandomArbitrary(0, 1);
+      if probability <= this_probabilityOfBecommingImmuneElseDie
+        newImmunityMatrix(u) = this_baseImmunityDuration;
+      else
+        newDeathMatrix(u) = true;
+      end
+    end
 
-    # update the infection matrix */
-    if (infectionMatrix[u] > 0) {
-      newInfectionMatrix[u] = infectionMatrix[u] - 1;
-    } else {
-      newInfectionMatrix[u] = infectionMatrix[u];
-    }
+    % update the infection matrix */
+    if infectionMatrix(u) > 0
+      newInfectionMatrix(u) = infectionMatrix(u) - 1;
+    else
+      newInfectionMatrix(u) = infectionMatrix(u);
+    end
 
-    if (newInfectionMatrix[u] !== 0 && newDeathMatrix[u] !== true) {
-      for (let i = 0; i < newXPositions.length; i += 1) {
-        if (i == u || newImmunityMatrix[i] > 0 || newDeathMatrix[i]) {
-          continue; # eslint-disable-line no-continue
-        }
-        const x = newXPositions[i];
-        const y = newYPositions[i];
-        const distance = Math.sqrt((x - rootX) ** 2 + (y - rootY) ** 2);
+    if newInfectionMatrix[u] ~= 0 && newDeathMatrix[u] ~= true
+      for i = 1:size(newXPositions, 2)
+        if i == u || newImmunityMatrix(i) > 0 || newDeathMatrix(i)
+          continue; % eslint-disable-line no-continue
+        end
 
-        if (distance < this_diseaseRadius + this_personRadius) {
-          let alreadyMightInfected = false;
-          for (let k = 0; k < mightGetInfected.length; k += 1) {
-            if (mightGetInfected[k].index == i) {
-              mightGetInfected[k].distances.push(distance);
+        x = newXPositions(i);
+        y = newYPositions(i);
+        distanze = sqrt((x - rootX)^2 + (y - rootY)^2);
+
+        if distanze < this_diseaseRadius + this_personRadius
+          alreadyMightInfected = false;
+          for k = 1:mightGetInfected
+            if mightGetInfected_index(k) == i
+              mightGetInfected_distances(k) = [mightGetInfected_distances(k); distanze];
               alreadyMightInfected = true;
-            }
-          }
-          if (!alreadyMightInfected) {
+            end
+          end
+          if ~alreadyMightInfected
+            mightGetInfected(end + 1) = size(mightGetInfected, 2) + 1
+            mightGetInfected_index(end + 1) = i;
+            mightGetInfected_distances(end + 1) = [distanze];
             mightGetInfected.push({
               index: i,
-              distances: [distance],
+              distances: [distanze],
             });
           }
         }
@@ -261,7 +280,7 @@ end
       const x = newXPositions[i];
       const y = newYPositions[i];
       this.ctx.beginPath();
-      this.ctx.arc(x, y, this_personRadius, 0, 2 * Math.PI, false);
+      this.ctx.arc(x, y, this_personRadius, 0, 2 * pi, false);
       this.ctx.strokeStyle = 'black';
       this.ctx.stroke();
 
@@ -279,7 +298,7 @@ end
         this.ctx.fill();
 
         this.ctx.beginPath();
-        this.ctx.arc(x, y, this_diseaseRadius, 0, 2 * Math.PI, false);
+        this.ctx.arc(x, y, this_diseaseRadius, 0, 2 * pi, false);
         this.ctx.strokeStyle = 'blue';
         this.ctx.stroke();
       }
@@ -287,7 +306,7 @@ end
     for (let k = 0; k < this.subways.length; k += 1) {
       const { x, y, r } = this.subways[k];
       this.ctx.beginPath();
-      this.ctx.arc(x, y, r, 0, 2 * Math.PI, false);
+      this.ctx.arc(x, y, r, 0, 2 * pi, false);
       this.ctx.strokeStyle = 'green';
       this.ctx.stroke();
     }
