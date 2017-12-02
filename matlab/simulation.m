@@ -1,3 +1,4 @@
+% GAFFEL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1111111111111
 clear; clear all; clc;
 
 global this_width;
