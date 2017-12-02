@@ -1,4 +1,3 @@
-% GAFFEL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1111111111111
 clear; clear all; clc;
 
 global this_width;
@@ -31,48 +30,32 @@ this_subways_y = [300, 300];
 this_subways_r = [100, 100];
 this_subways = [1, 2];
 
-
-[frame_1_newXPositions, frame_1_newYPositions, frame_1_newInfectionMatrix, frame_1_newImmunityMatrix, frame_1_newDeathMatrix, frame_1_newTrainDepartureCountdown, frame_1_newInversedPredetermied] = getInitialFrame();
-
-[frame_2_newXPositions, frame_2_newYPositions, frame_2_newInfectionMatrix, frame_2_newImmunityMatrix, frame_2_newDeathMatrix, frame_2_newTrainDepartureCountdown, frame_2_newInversedPredetermied] = update(frame_1_newXPositions, frame_1_newYPositions, frame_1_newInfectionMatrix, frame_1_newImmunityMatrix, frame_1_newDeathMatrix, frame_1_newTrainDepartureCountdown, frame_1_newInversedPredetermied);
-
 figure;
 
-function draw = scatterThePeopleInAFigureSoWeCanSeeThemGoAboutTheirBusinessInRealTimeOnABigFancyDisplayForMakeBenefitGloriousNationOfKazakhstan(xPositions,yPositions)
-    scatter(frame_2_newXPositions(:),frame_2_newYPositions(:),10,'y',"filled");
-    hold on
-
-    xPositions = []; % Make empty list for x-coordinates.
-    for i=size(frame_2_newMatrix, 2) % Iterates through matrix for the following frame.
-        if frame_2_newMatrix(i) > 0
-          xPositions(i) = 1 % Sets every present person to 1.
-        else
-          xPositions(i) = 0 % Sets every empty space to 0.
-        end
-    end
-    xPositions = xPositions .* frame_2_newXPositions; % Gives every index containing a person an x-coordinate.
-    xPositions = xPositions(xPositions'~=0); % Filters out every index containing 0 so as to not plot non-existent people.
-
-    yPositions = [];
-    for i=size(frame_2_newMatrix, 2)
-        if frame_2_newMatrix(i) > 0
-          yPositions(i) = 1
-        else
-          yPositions(i) = 0
-        end
-    end
-    yPositions = yPositions .* frame_2_newYPositions;
-    yPositions = yPositions(yPositions'~=0);
+for i = 1:10000
+    [frame_1_newXPositions, frame_1_newYPositions, frame_1_newInfectionMatrix, frame_1_newImmunityMatrix, frame_1_newDeathMatrix, frame_1_newTrainDepartureCountdown, frame_1_newInversedPredetermied] = getInitialFrame();
+    [frame_2_newXPositions, frame_2_newYPositions, frame_2_newInfectionMatrix, frame_2_newImmunityMatrix, frame_2_newDeathMatrix, frame_2_newTrainDepartureCountdown, frame_2_newInversedPredetermied] = update(frame_1_newXPositions, frame_1_newYPositions, frame_1_newInfectionMatrix, frame_1_newImmunityMatrix, frame_1_newDeathMatrix, frame_1_newTrainDepartureCountdown, frame_1_newInversedPredetermied);
     
-    scatter(xPositions(:),yPositions(:),10,'r',"filled"); % Plots the filtered coordinates as points.
-    hold on;
-    % scatter(recovered(:,1),recovered(:,2),10,'b',"filled");
-    % hold on
-    % scatter(infected(:,1),infected(:,2),10,'g',"filled");
-    % hold on
+    global frame_2_newXPositions
+    global frame_2_newYPositions
+    scatterableXPositions = scatterThePeopleInAFigureSoWeCanSeeThemGoAboutTheirBusinessInRealTimeOnABigFancyDisplayForMakeBenefitGloriousNationOfKazakhstan(frame_2_newXPositions, frame_2_newYPositions)
+    scatterableYPositions = scatterThePeopleInAFigureSoWeCanSeeThemGoAboutTheirBusinessInRealTimeOnABigFancyDisplayForMakeBenefitGloriousNationOfKazakhstan(frame_2_newXPositions, frame_2_newYPositions)
+    scatter(scatterableXPositions(:),scatterableYPositions(:),10,'y',"filled")
+    set(gca,'color','black'); % Sets figure background color to black
 end
 
-set(gca,'color','black');                   % Sets figure background color to black
+
+
+scatter(frame_2_newXPositions(:),frame_2_newYPositions(:),10,'y',"filled")
+hold o
+scatter(xPositions(:),yPositions(:),10,'r',"filled"); % Plots the filtered coordinates as points
+hold on
+% scatter(recovered(:,1),recovered(:,2),10,'b',"filled")
+% hold o
+% scatter(infected(:,1),infected(:,2),10,'g',"filled")
+% hold on
+
+
 
 function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix, newTrainDepartureCountdown, newInversedPredetermied] = getInitialFrame()
   global this_width;
@@ -214,7 +197,6 @@ function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, n
 
           translateX = nextStation_x - subway_x;
           translateY = nextStation_y - subway_y;
-
 
           newXPositions(i) = bindX(translateX + x);
           newYPositions(i) = bindY(translateY + y);
@@ -381,4 +363,32 @@ end
 function cb = getRandomArbitrary(min, max)
   bound = rand() * (max - min);
   cb = bound + min;
+end
+
+% Function that takes in positions of persons and spits them out in a format more conducive to plotting.
+function [filterPersonsX, filterPersonsY] = scatterThePeopleInAFigureSoWeCanSeeThemGoAboutTheirBusinessInRealTimeOnABigFancyDisplayForMakeBenefitGloriousNationOfKazakhstan(xPositions,yPositions)
+    global frame_2_newXPositions
+    global frame_2_newYPositions
+
+    xPositions = []; % Make empty list for x-coordinates.
+    for i=size(frame_2_newMatrix, 2) % Iterates through matrix for the following frame.
+        if frame_2_newMatrix(i) > 0
+            xPositions(i) = 1 % Sets every present person to 1.
+        else
+            xPositions(i) = 0 % Sets every empty space to 0.
+        end
+    end
+    xPositions = xPositions .* frame_2_newXPositions; % Gives every index containing a person an x-coordinate.
+    filterPersonsX = xPositions(xPositions'~=0); % Filters out every index containing 0 so as to not plot non-existent people.
+
+    yPositions = [];
+    for i=size(frame_2_newMatrix, 2)
+        if frame_2_newMatrix(i) > 0
+            yPositions(i) = 1
+        else
+            yPositions(i) = 0
+        end
+    end
+    yPositions = yPositions .* frame_2_newYPositions;
+    filterPersonsY = yPositions(yPositions'~=0); 
 end
