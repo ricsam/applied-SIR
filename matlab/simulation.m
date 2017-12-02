@@ -37,37 +37,39 @@ this_subways = [1, 2];
 
 figure;
 
-scatter(frame_2_newXPositions(:),frame_2_newYPositions(:),10,'y',"filled");
-hold on
+function draw = scatterThePeopleInAFigureSoWeCanSeeThemGoAboutTheirBusinessInRealTimeOnABigFancyDisplayForMakeBenefitGloriousNationOfKazakhstan(xPositions,yPositions)
+    scatter(frame_2_newXPositions(:),frame_2_newYPositions(:),10,'y',"filled");
+    hold on
 
-plotX_infected = [];
-for i=size(frame_2_newInfectionMatrix, 2)
-  if frame_2_newInfectionMatrix(i) > 0
-    plotX_infected(i) = 1
-  else
-    plotX_infected(i) = 0
-  end
+    xPositions = []; % Make empty list for x-coordinates.
+    for i=size(frame_2_newMatrix, 2) % Iterates through matrix for the following frame.
+        if frame_2_newMatrix(i) > 0
+          xPositions(i) = 1 % Sets every present person to 1.
+        else
+          xPositions(i) = 0 % Sets every empty space to 0.
+        end
+    end
+    xPositions = xPositions .* frame_2_newXPositions; % Gives every index containing a person an x-coordinate.
+    xPositions = xPositions(xPositions'~=0); % Filters out every index containing 0 so as to not plot non-existent people.
+
+    yPositions = [];
+    for i=size(frame_2_newMatrix, 2)
+        if frame_2_newMatrix(i) > 0
+          yPositions(i) = 1
+        else
+          yPositions(i) = 0
+        end
+    end
+    yPositions = yPositions .* frame_2_newYPositions;
+    yPositions = yPositions(yPositions'~=0);
+    
+    scatter(xPositions(:),yPositions(:),10,'r',"filled"); % Plots the filtered coordinates as points.
+    hold on;
+    % scatter(recovered(:,1),recovered(:,2),10,'b',"filled");
+    % hold on
+    % scatter(infected(:,1),infected(:,2),10,'g',"filled");
+    % hold on
 end
-plotX_infected = plotX_infected .* frame_2_newXPositions;
-plotX_infected = plotX_infected(plotX_infected'~=0);
-
-plotY_infected = [];
-for i=size(frame_2_newInfectionMatrix, 2)
-  if frame_2_newInfectionMatrix(i) > 0
-    plotY_infected(i) = 1
-  else
-    plotY_infected(i) = 0
-  end
-end
-plotY_infected = plotY_infected .* frame_2_newYPositions;
-plotY_infected = plotY_infected(plotY_infected'~=0);
-
-scatter(plotX_infected(:),plotY_infected(:),10,'r',"filled");
-hold on;
-% scatter(recovered(:,1),recovered(:,2),10,'b',"filled");
-% hold on
-% scatter(infected(:,1),infected(:,2),10,'g',"filled");
-% hold on
 
 set(gca,'color','black');                   % Sets figure background color to black
 
