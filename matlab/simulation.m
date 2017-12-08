@@ -1,5 +1,6 @@
 clear; clear all; clc;
 
+
 global this_width;
 global this_height;
 global this_maxSpeed;
@@ -62,7 +63,7 @@ function draw = scatterThePeopleInAFigureSoWeCanSeeThemGoAboutTheirBusinessInRea
     end
     yPositions = yPositions .* frame_2_newYPositions;
     yPositions = yPositions(yPositions'~=0);
-    
+
     scatter(xPositions(:),yPositions(:),10,'r',"filled"); % Plots the filtered coordinates as points.
     hold on;
     % scatter(recovered(:,1),recovered(:,2),10,'b',"filled");
