@@ -7,21 +7,23 @@ import styled from 'styled-components';
 import { GithubPicker } from 'react-color';
 import Simulation from './Simulation';
 
+const keys = ob => Object.keys(ob);
+
 document.addEventListener('dragstart', ev => {
   ev.preventDefault();
 });
 
 document.body.style.margin = 0;
 
-const width = 800;
-const height = 600;
+const bufferWidth = 800;
+const bufferHeight = 600;
 
 const simulation = new Simulation({
-  width: 800,
-  height: 600,
+  width: bufferWidth,
+  height: bufferHeight,
   maxSpeed: 3,
   diseaseRadius: 10,
-  baseInfectionDuration: 5,
+  baseInfectionDuration: 15,
   baseImmunityDuration: 360,
   personRadius: 3,
   numberOfPeople: 1200,
@@ -40,8 +42,8 @@ const simulation = new Simulation({
 });
 
 const Rect = styled.div`
-  width: ${({ width: w }) => w}px;
-  height: ${({ height: h }) => h}px;
+  width: ${({ width }) => width}px;
+  height: ${({ height }) => height}px;
   border: 5px solid ${({ color }) => color};
   box-sizing: border-box;
   ${({ focus }) => focus && 'background: rgba(255, 255, 255, 0.5);'};
@@ -50,7 +52,7 @@ const Rect = styled.div`
 // let time = new Date();
 
 const Controls = styled.div`
-  width: ${({ width: w }) => w}px;
+  width: ${({ width }) => width}px;
   background: blue;
 `;
 
@@ -116,9 +118,7 @@ class DragableSIRSampleArea extends React.PureComponent {
     this.props.onStart(this.props.id);
   };
   render() {
-    const {
-      width: w, height: h, bounds, focus,
-    } = this.props;
+    const { width: w, height: h, bounds, focus } = this.props;
     return (
       <AbsolutPsed focus={focus}>
         <Draggable
@@ -142,9 +142,9 @@ class DragableSIRSampleArea extends React.PureComponent {
 // eslint-disable-next-line
 class App extends React.PureComponent {
   state = {
-    width,
-    height,
-    sirGraphWidth: 600,
+    width: bufferWidth,
+    height: bufferHeight,
+    sirGraphWidth: 800,
     sirGraphHeight: 300,
     sirs: {},
     sirSquareFocus: null,
@@ -179,11 +179,12 @@ class App extends React.PureComponent {
   };
   frames = [];
   tick() {
-    this.frames[this.frames.length] = simulation.update(...this.frames[this.frames.length - 1]);
+    this.frames[this.frames.length] = simulation.update(
+      ...this.frames[this.frames.length - 1]
+    );
     this.renderCanvas();
-    // this.renderSIR();
+    this.renderSIR();
   }
-
 
   addSIR = () => {
     const id = uuid();
@@ -244,36 +245,96 @@ class App extends React.PureComponent {
     }));
   };
   renderSIR = () => {
-    this.graphBuffer.clearRect(0, 0, this.state.sirGraphWidth, this.state.sirGraphHeight);
-    for (let k = 0; k < this.frames.length; k += 1) {
-      const frame = this.frames[k];
-      const frameSuceptible = [];
-      const frameInfected = [];
-      const framePeople = [];
-      const frameDead = [];
-      const frameRecovered = [];
+    const c = this.graphBuffer;
+    c.clearRect(0, 0, this.state.sirGraphWidth, this.state.sirGraphHeight);
+    const sirKeys = keys(this.state.sirs);
+    if (!sirKeys.length) return;
 
-      for (let i = 0; i < frame[0].length; i += 1) {
-        const x = frame[0][i];
-        const y = frame[1][i];
-        if (x >= frame.x && x <= frame.x + frame.width && y >= frame.y && y <= frame.y + frame.height) {
-          framePeople.push(i);
-          if (frame[2][i]) { /* infectionMatrix */
-            frameInfected.push(i);
-          } else if (frame[3][i]) { /* immunityMatrix */
-            frameRecovered.push(i);
-          } else if (frame[4][i]) { /* deathMatrix */
-            frameDead.push(i);
-          } else {
-            frameSuceptible.push(i);
+    const graphs = {};
+    for (let u = 0; u < sirKeys.length; u += 1) {
+      graphs[sirKeys[u]] = [];
+      const { x, y, width, height, color } = this.state.sirs[sirKeys[u]];
+
+      c.strokeStyle = color;
+
+      for (let k = 0; k < this.frames.length; k += 1) {
+        const frame = this.frames[k];
+        const numberOfPeople = frame[0].length;
+
+        let suceptible = 0;
+        let infected = 0;
+        let dead = 0;
+        let recovered = 0;
+        let people = 0;
+
+        const [
+          xPositions,
+          yPositions,
+          infectionMatrix,
+          immunityMatrix,
+          deathMatrix,
+        ] = frame;
+
+        for (let i = 0; i < numberOfPeople; i += 1) {
+          // loop people
+          const pX = xPositions[i];
+          const pY = yPositions[i];
+
+          if (pX >= x && pX <= x + width && pY >= y && pY <= y + height) {
+            people += 1;
+            if (deathMatrix[i]) {
+              dead += 1;
+            } else if (infectionMatrix[i]) {
+              infected += 1;
+            } else if (immunityMatrix[i]) {
+              recovered += 1;
+            } else {
+              suceptible += 1;
+            }
           }
         }
+        graphs[sirKeys[u]][k] = {
+          dead: dead / people,
+          infected: infected / people,
+          recovered: recovered / people,
+          suceptible: suceptible / people,
+        };
       }
     }
-    // this.graphBuffer.
+
+    sirKeys.forEach(graphKey => {
+      const { color: rectColor } = this.state.sirs[graphKey];
+
+      [
+        { key: 'dead', color: 'rgba(255, 255, 255, 0.1)' },
+        { key: 'infected', color: 'rgba(255, 0, 0, 0.1)' },
+        { key: 'recovered', color: 'rgba(0, 255, 0, 0.1)' },
+        { key: 'suceptible', color: 'rgba(0, 0, 255, 0.1)' },
+      ].forEach(({ key, color }) => {
+        c.strokeStyle = rectColor;
+        c.lineWidth = 1;
+
+        c.beginPath();
+        c.moveTo(
+          0,
+          this.state.sirGraphHeight * (1 - graphs[graphKey][0].infected)
+        );
+        for (let k = 1; k < this.frames.length; k += 1) {
+          const vX = this.state.sirGraphWidth * k / (this.frames.length - 1);
+          const vY =
+            this.state.sirGraphHeight * (1 - graphs[graphKey][k][key]);
+          c.lineTo(vX, vY);
+        }
+        c.stroke();
+        c.strokeStyle = color;
+        c.lineWidth = 5;
+        c.stroke();
+        c.closePath();
+      });
+    });
   };
+
   renderCanvas() {
-    simulation.setContext(this.simulationBuffer);
     simulation.render(...this.frames[this.frames.length - 1]);
   }
   renderNextFrame = () => {
@@ -287,6 +348,7 @@ class App extends React.PureComponent {
             if (!this.simulationBuffer) {
               this.simulationBuffer = el.getContext('2d');
             }
+            simulation.setContext(this.simulationBuffer);
           }}
           width={this.state.width}
           height={this.state.height}
@@ -316,7 +378,7 @@ class App extends React.PureComponent {
         </Controls>
         <canvas
           ref={el => {
-            if (this.graphBuffer) this.graphBuffer = el.getContext('2d');
+            if (!this.graphBuffer) this.graphBuffer = el.getContext('2d');
           }}
           width={this.state.sirGraphWidth}
           height={this.state.sirGraphHeight}
