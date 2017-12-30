@@ -117,6 +117,8 @@
     "eslint-plugin-jsx-a11y": "^6.0.2",
     "eslint-plugin-react": "^7.4.0",
     "immutable": "^3.8.2",
+    "ml-levenberg-marquardt": "^1.0.1",
+    "ml-matrix": "^5.0.1",
     "react": "^16.1.0",
     "react-color": "^2.13.8",
     "react-dom": "^16.1.0",

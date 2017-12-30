@@ -5,7 +5,10 @@ import Draggable from 'react-draggable';
 import uuid from 'uuid/v4';
 import styled from 'styled-components';
 import { GithubPicker } from 'react-color';
+import OptimizedLevenbergMarqardt from './levenberg-marquardt-modified';
 import Simulation from './Simulation';
+
+const LM = new OptimizedLevenbergMarqardt();
 
 const keys = ob => Object.keys(ob);
 
@@ -74,16 +77,51 @@ const ControlerWrapper = styled.div`
 class ControlRow extends React.PureComponent {
   static propTypes = {
     focus: PropTypes.bool,
+    selectedAsReference: PropTypes.bool,
     viewColorPicker: PropTypes.func,
+    changeSize: PropTypes.func,
+    setAsReference: PropTypes.func,
     id: PropTypes.string,
+    width: PropTypes.number,
+    height: PropTypes.number,
+  };
+  setAsReference = () => {
+    this.props.setAsReference(this.props.id);
   };
   open = () => {
     this.props.viewColorPicker(this.props.id);
+  };
+  changeWidth = ev => {
+    this.props.changeSize(this.props.id, {
+      width: Number(ev.currentTarget.value),
+      height: this.props.height,
+    });
+  };
+  changeHeight = ev => {
+    this.props.changeSize(this.props.id, {
+      width: this.props.width,
+      height: Number(ev.currentTarget.value),
+    });
   };
   render() {
     return (
       <ControlerWrapper focus={this.props.focus}>
         <Button onClick={this.open}>Change color</Button>
+        Width:{' '}
+        <input
+          type="number"
+          onChange={this.changeWidth}
+          value={this.props.width}
+        />
+        Height:{' '}
+        <input
+          type="number"
+          onChange={this.changeHeight}
+          value={this.props.height}
+        />
+        {!this.props.selectedAsReference && (
+          <Button onClick={this.setAsReference}>Set this as reference</Button>
+        )}
       </ControlerWrapper>
     );
   }
@@ -146,7 +184,16 @@ class App extends React.PureComponent {
     height: bufferHeight,
     sirGraphWidth: 800,
     sirGraphHeight: 300,
-    sirs: {},
+    sirReferenceID: 'initialid',
+    sirs: {
+      initialid: {
+        width: bufferWidth,
+        height: bufferHeight,
+        x: 0,
+        y: 0,
+        color: 'cyan',
+      },
+    },
     sirSquareFocus: null,
     playLive: false,
     colorPicker: false,
@@ -158,25 +205,6 @@ class App extends React.PureComponent {
     this.initializeTicks();
   }
 
-  SIR = {
-    alpha: 0.1,
-    tau: 20,
-    mu: 0.1,
-    omega: 0.1,
-    starts: {
-      S: 1200,
-      I: 3,
-      R: 0,
-      D: 0,
-    },
-  };
-
-  initializeTicks = () => {
-    if (this.state.playLive) {
-      this.tick();
-    }
-    window.requestAnimationFrame(this.initializeTicks);
-  };
   frames = [];
   tick() {
     this.frames[this.frames.length] = simulation.update(
@@ -244,6 +272,46 @@ class App extends React.PureComponent {
       colorPicker: false,
     }));
   };
+
+  changeRectSize = (id, { height, width }) => {
+    this.setState({
+      sirs: {
+        ...this.state.sirs,
+        [id]: {
+          ...this.state.sirs[id],
+          width,
+          height,
+        },
+      },
+    });
+  };
+
+  setSirReference = id => {
+    this.setState({
+      sirReferenceID: id,
+    });
+  };
+
+  initializeTicks = () => {
+    if (this.state.playLive) {
+      this.tick();
+    }
+    window.requestAnimationFrame(this.initializeTicks);
+  };
+
+  SIR = {
+    alpha: 0.1,
+    tau: 20,
+    mu: 0.1,
+    omega: 0.1,
+    starts: {
+      S: 1200,
+      I: 3,
+      R: 0,
+      D: 0,
+    },
+  };
+
   renderSIR = () => {
     const c = this.graphBuffer;
     c.clearRect(0, 0, this.state.sirGraphWidth, this.state.sirGraphHeight);
@@ -302,27 +370,32 @@ class App extends React.PureComponent {
       }
     }
 
+    // const stepSize = Math.min(1 / this.frames.length, 0.01);
+
+
+    const xSpacing = this.state.sirGraphWidth / this.frames.length;
+
     sirKeys.forEach(graphKey => {
       const { color: rectColor } = this.state.sirs[graphKey];
-
-      [
-        { key: 'dead', color: 'rgba(255, 255, 255, 0.1)' },
+      const curves = [
+        { key: 'suceptible', color: 'rgba(0, 0, 255, 0.1)' },
         { key: 'infected', color: 'rgba(255, 0, 0, 0.1)' },
         { key: 'recovered', color: 'rgba(0, 255, 0, 0.1)' },
-        { key: 'suceptible', color: 'rgba(0, 0, 255, 0.1)' },
-      ].forEach(({ key, color }) => {
+        { key: 'dead', color: 'rgba(255, 255, 255, 0.1)' },
+      ];
+      curves.forEach(({ key, color }) => {
         c.strokeStyle = rectColor;
         c.lineWidth = 1;
 
+        const initialValue =
+          this.state.sirGraphHeight * (1 - graphs[graphKey][0].infected);
+
         c.beginPath();
-        c.moveTo(
-          0,
-          this.state.sirGraphHeight * (1 - graphs[graphKey][0].infected)
-        );
+        c.moveTo(0, initialValue);
+
         for (let k = 1; k < this.frames.length; k += 1) {
-          const vX = this.state.sirGraphWidth * k / (this.frames.length - 1);
-          const vY =
-            this.state.sirGraphHeight * (1 - graphs[graphKey][k][key]);
+          const vX = k * xSpacing;
+          const vY = this.state.sirGraphHeight * (1 - graphs[graphKey][k][key]);
           c.lineTo(vX, vY);
         }
         c.stroke();
@@ -331,6 +404,40 @@ class App extends React.PureComponent {
         c.stroke();
         c.closePath();
       });
+
+      if (graphKey === this.state.sirReferenceID) {
+        // if (this.frames.length % 100 === 0) {
+        //   LM.setData(graphs[graphKey], this.frames.length);
+        //   LM.calculate();
+        //   LM.plot({
+        //     context: c,
+        //     elapsedTime: this.frames.length,
+        //     width: this.state.sirGraphWidth,
+        //     height: this.state.sirGraphHeight,
+        //   });
+        // }
+
+
+        // curves.forEach(({ color }, index) => {
+        //   c.strokeStyle = 'orange';
+        //   c.lineWidth = 1;
+        //   const initialValue =
+        //     this.state.sirGraphHeight * (1 - solution(0)[index]);
+        //   c.beginPath();
+        //   c.moveTo(0, initialValue);
+        //   for (let k = 1; k < this.frames.length; k += 1) {
+        //     const vX = k * xSpacing;
+        //     const vY = this.state.sirGraphHeight * (1 - solution(k)[index]);
+        //     c.lineTo(vX, vY);
+        //   }
+        //   c.stroke();
+        //   c.strokeStyle = color;
+        //   c.lineWidth = 5;
+        //   c.stroke();
+        //   c.closePath();
+        // });
+
+      }
     });
   };
 
@@ -340,6 +447,7 @@ class App extends React.PureComponent {
   renderNextFrame = () => {
     this.tick();
   };
+
   render() {
     return (
       <div>
@@ -370,6 +478,11 @@ class App extends React.PureComponent {
               id={id}
               focus={this.state.sirSquareFocus === id}
               viewColorPicker={this.openColorPicker}
+              changeSize={this.changeRectSize}
+              width={this.state.sirs[id].width}
+              height={this.state.sirs[id].height}
+              selectedAsReference={id === this.state.sirReferenceID}
+              setAsReference={this.setSirReference}
             />
           ))}
           <div>
@@ -377,6 +490,7 @@ class App extends React.PureComponent {
           </div>
         </Controls>
         <canvas
+          style={{ backgroundColor: '#1a1a1a' }}
           ref={el => {
             if (!this.graphBuffer) this.graphBuffer = el.getContext('2d');
           }}
