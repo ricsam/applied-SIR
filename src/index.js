@@ -26,7 +26,7 @@ const simulation = new Simulation({
   height: bufferHeight,
   maxSpeed: 3,
   diseaseRadius: 10,
-  baseInfectionDuration: 15,
+  baseInfectionDuration: 10,
   baseImmunityDuration: 360,
   personRadius: 3,
   numberOfPeople: 1200,
@@ -299,19 +299,6 @@ class App extends React.PureComponent {
     window.requestAnimationFrame(this.initializeTicks);
   };
 
-  SIR = {
-    alpha: 0.1,
-    tau: 20,
-    mu: 0.1,
-    omega: 0.1,
-    starts: {
-      S: 1200,
-      I: 3,
-      R: 0,
-      D: 0,
-    },
-  };
-
   renderSIR = () => {
     const c = this.graphBuffer;
     c.clearRect(0, 0, this.state.sirGraphWidth, this.state.sirGraphHeight);
@@ -332,7 +319,7 @@ class App extends React.PureComponent {
         let suceptible = 0;
         let infected = 0;
         let dead = 0;
-        let recovered = 0;
+        let immune = 0;
         let people = 0;
 
         const [
@@ -355,7 +342,7 @@ class App extends React.PureComponent {
             } else if (infectionMatrix[i]) {
               infected += 1;
             } else if (immunityMatrix[i]) {
-              recovered += 1;
+              immune += 1;
             } else {
               suceptible += 1;
             }
@@ -364,7 +351,7 @@ class App extends React.PureComponent {
         graphs[sirKeys[u]][k] = {
           dead: dead / people,
           infected: infected / people,
-          recovered: recovered / people,
+          immune: immune / people,
           suceptible: suceptible / people,
         };
       }
@@ -380,7 +367,7 @@ class App extends React.PureComponent {
       const curves = [
         { key: 'suceptible', color: 'rgba(0, 0, 255, 0.1)' },
         { key: 'infected', color: 'rgba(255, 0, 0, 0.1)' },
-        { key: 'recovered', color: 'rgba(0, 255, 0, 0.1)' },
+        { key: 'immune', color: 'rgba(0, 255, 0, 0.1)' },
         { key: 'dead', color: 'rgba(255, 255, 255, 0.1)' },
       ];
       curves.forEach(({ key, color }) => {
@@ -388,7 +375,7 @@ class App extends React.PureComponent {
         c.lineWidth = 1;
 
         const initialValue =
-          this.state.sirGraphHeight * (1 - graphs[graphKey][0].infected);
+          this.state.sirGraphHeight * (1 - graphs[graphKey][0][key]);
 
         c.beginPath();
         c.moveTo(0, initialValue);
@@ -406,16 +393,18 @@ class App extends React.PureComponent {
       });
 
       if (graphKey === this.state.sirReferenceID) {
-        // if (this.frames.length % 100 === 0) {
-        //   LM.setData(graphs[graphKey], this.frames.length);
-        //   LM.calculate();
-        //   LM.plot({
-        //     context: c,
-        //     elapsedTime: this.frames.length,
-        //     width: this.state.sirGraphWidth,
-        //     height: this.state.sirGraphHeight,
-        //   });
-        // }
+        if (this.frames.length % 100 === 0) {
+          LM.setData(graphs[graphKey], this.frames.length);
+          LM.calculate();
+
+          console.log(LM.discreteSavedEuler);
+        }
+        LM.plot({
+          context: c,
+          elapsedTime: this.frames.length,
+          width: this.state.sirGraphWidth,
+          height: this.state.sirGraphHeight,
+        });
 
 
         // curves.forEach(({ color }, index) => {

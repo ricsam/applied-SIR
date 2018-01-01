@@ -2,98 +2,112 @@ import { Matrix, inverse as inv } from 'ml-matrix';
 
 const stepSize = 1e-3;
 
+const alpha = 0.01;
+const beta = 0.75;
+const gamma = 0.15;
+const v = 0.15;
+
+
 export default class LMm {
   damping = 1;
-  gradientDifference = 1e-3;
-  maxIterations = 10;
+  gradientDifference = 1e-2;
+  maxIterations = 25;
   errorTolerance = 1e-2 * 4;
   systemSize = 4;
 
   stepSize = stepSize;
   frameIterations = Math.round(1 / stepSize);
-  s0 = 1;
-  i0 = 0.005;
-  r0 = 0.0001;
-  d0 = 0.0001;
 
-  alpha = 13;
-  tau = 0.0045;
-  mu = 5;
-  omega = -0.7;
+  s0 = 0.9;
+  i0 = 0.1;
+  p0 = 0;
+  d0 = 0;
 
-  curves = ['suceptible', 'infected', 'recovered', 'dead'];
-  params = ['s', 'i', 'r', 'd'];
-  args = ['alpha', 'tau', 'mu', 'omega'];
+  alpha = alpha;
+  beta = beta;
+  gamma = gamma;
+  v = v;
 
-  ds(t, { s, i, r }) {
-    return -this.alpha * s * i + r * (t - this.tau);
+  resetArgs = true;
+
+  curves = ['suceptible', 'infected', 'immune', 'dead'];
+  params = ['s', 'i', 'p', 'd'];
+  args = ['beta', 'gamma', 'alpha', 'v'];
+
+  ds(t, { s, i, p }) {
+    return -this.beta * s * i + this.gamma * p;
   }
   di(t, { s, i }) {
-    return this.alpha * s * i - this.mu * i - this.omega * i;
+    return this.beta * s * i - this.alpha * i - this.v * i;
   }
-  dr(t, { i, r }) {
-    return this.mu * i - r * (t - this.tau);
+  dp(t, { i, p }) {
+    return this.v * i - this.gamma * p;
   }
   dd(t, { i }) {
-    return this.omega * i;
+    return this.alpha * i;
   }
 
-  // alpha
-  nextAlphaDs(t, { s, i, r }) {
-    return -this.nextAlpha * s * i + r * (t - this.tau);
+  // beta
+  nextBetaDs(t, { s, i, p }) {
+    return -this.nextBeta * s * i + this.gamma * p;
   }
-  nextAlphaDi(t, { s, i }) {
-    return this.nextAlpha * s * i - this.mu * i - this.omega * i;
+  nextBetaDi(t, { s, i }) {
+    return this.nextBeta * s * i - this.alpha * i - this.v * i;
   }
-  // dr same
+  // dp same
   // dd same
 
-  // tau
-  nextTauDs(t, { s, i, r }) {
-    return -this.alpha * s * i + r * (t - this.nextTau);
+  // gamma
+  nextGammaDs(t, { s, i, p }) {
+    return -this.beta * s * i + this.nextGamma * p;
   }
   // di same
-  nextTauDr(t, { i, r }) {
-    return this.mu * i - r * (t - this.nextTau);
+  nextGammaDp(t, { i, p }) {
+    return this.v * i - this.nextGamma * p;
   }
   // dd same
 
-  // mu
+  // alpha
   // ds same
-  nextMuDi(t, { s, i }) {
-    return this.alpha * s * i - this.nextMu * i - this.omega * i;
+  nextAlphaDi(t, { s, i }) {
+    return this.beta * s * i - this.nextAlpha * i - this.v * i;
   }
-  nextMuDr(t, { i, r }) {
-    return this.nextMu * i - r * (t - this.tau);
+  // dp same
+  nextAlphaDd(t, { i }) {
+    return this.nextAlpha * i;
+  }
+
+  // v
+  // ds same
+  nextVDi(t, { s, i }) {
+    return this.beta * s * i - this.alpha * i - this.nextV * i;
+  }
+  nextVDp(t, { i, p }) {
+    return this.nextV * i - this.gamma * p;
   }
   // dd same
-
-  // omega
-  // ds same
-  nextOmegaDi(t, { s, i }) {
-    return this.alpha * s * i - this.mu * i - this.nextOmega * i;
-  }
-  // dr same
-  nextOmegaDd(t, { i }) {
-    return this.nextOmega * i;
-  }
 
   initialTargetEuler() {
     this.savedEuler = [];
     this.discreteSavedEuler = [];
 
-    const s = this.s0 * this.ds(0, { s: this.s0, i: this.i0, r: this.r0 });
-    const i = this.i0 * this.di(0, { s: this.s0, i: this.i0 });
-    const r = this.r0 * this.dr(0, { i: this.i0, r: this.r0 });
-    const d = this.d0 * this.dd(0, { i: this.i0 });
+    const initialData = {
+      s: this.s0, i: this.i0, p: this.p0, d: this.d0,
+    };
+
+    const s = this.s0 * this.ds(0, initialData);
+    const i = this.i0 * this.di(0, initialData);
+    const p = this.p0 * this.dp(0, initialData);
+    const d = this.d0 * this.dd(0, initialData);
+
 
     if (
       Number.isNaN(s) ||
       s === Infinity ||
       Number.isNaN(i) ||
       i === Infinity ||
-      Number.isNaN(r) ||
-      r === Infinity ||
+      Number.isNaN(p) ||
+      p === Infinity ||
       Number.isNaN(d) ||
       d === Infinity
     ) {
@@ -103,7 +117,7 @@ export default class LMm {
     const initialIntegral = {
       s,
       i,
-      r,
+      p,
       d,
     };
     this.savedEuler[0] = initialIntegral;
@@ -115,83 +129,85 @@ export default class LMm {
     this.nextSavedEuler = [];
     this.nextDiscreteSavedEuler = [];
 
+    this.nextBeta = this.beta + this.gradientDifference;
+    this.nextGamma = this.gamma + this.gradientDifference;
     this.nextAlpha = this.alpha + this.gradientDifference;
-    this.nextTau = this.tau + this.gradientDifference;
-    this.nextMu = this.mu + this.gradientDifference;
-    this.nextOmega = this.omega + this.gradientDifference;
+    this.nextV = this.v + this.gradientDifference;
 
-    const initialData = { s: this.s0, i: this.i0, r: this.r0 };
+    const initialData = {
+      s: this.s0, i: this.i0, p: this.p0, d: this.d0,
+    };
 
     const s = this.s0 * this.ds(0, initialData);
     const i = this.i0 * this.di(0, initialData);
-    const r = this.r0 * this.dr(0, initialData);
+    const p = this.p0 * this.dp(0, initialData);
     const d = this.d0 * this.dd(0, initialData);
 
-    const nextAlphaS = this.s0 * this.nextAlphaDs(0, initialData);
+    const nextBetaS = this.s0 * this.nextBetaDs(0, initialData);
+    const nextBetaI = this.i0 * this.nextBetaDi(0, initialData);
+
+    const nextGammaS = this.s0 * this.nextGammaDs(0, initialData);
+    const nextGammaP = this.p0 * this.nextGammaDp(0, initialData);
+
     const nextAlphaI = this.i0 * this.nextAlphaDi(0, initialData);
+    const nextAlphaD = this.d0 * this.nextAlphaDd(0, initialData);
 
-    const nextTauS = this.s0 * this.nextTauDs(0, initialData);
-    const nextTauR = this.r0 * this.nextTauDr(0, initialData);
-
-    const nextMuI = this.i0 * this.nextMuDi(0, initialData);
-    const nextMuR = this.r0 * this.nextMuDr(0, initialData);
-
-    const nextOmegaI = this.i0 * this.nextOmegaDi(0, initialData);
-    const nextOmegaD = this.d0 * this.nextOmegaDd(0, initialData);
+    const nextVI = this.i0 * this.nextVDi(0, initialData);
+    const nextVP = this.p0 * this.nextVDp(0, initialData);
 
     if (
       Number.isNaN(s) ||
       s === Infinity ||
       Number.isNaN(i) ||
       i === Infinity ||
-      Number.isNaN(r) ||
-      r === Infinity ||
+      Number.isNaN(p) ||
+      p === Infinity ||
       Number.isNaN(d) ||
       d === Infinity ||
-      Number.isNaN(nextAlphaS) ||
-      nextAlphaS === Infinity ||
+      Number.isNaN(nextBetaS) ||
+      nextBetaS === Infinity ||
+      Number.isNaN(nextBetaI) ||
+      nextBetaI === Infinity ||
+      Number.isNaN(nextGammaS) ||
+      nextGammaS === Infinity ||
+      Number.isNaN(nextGammaP) ||
+      nextGammaP === Infinity ||
       Number.isNaN(nextAlphaI) ||
       nextAlphaI === Infinity ||
-      Number.isNaN(nextTauS) ||
-      nextTauS === Infinity ||
-      Number.isNaN(nextTauR) ||
-      nextTauR === Infinity ||
-      Number.isNaN(nextMuI) ||
-      nextMuI === Infinity ||
-      Number.isNaN(nextMuR) ||
-      nextMuR === Infinity ||
-      Number.isNaN(nextOmegaI) ||
-      nextOmegaI === Infinity ||
-      Number.isNaN(nextOmegaD) ||
-      nextOmegaD === Infinity
+      Number.isNaN(nextAlphaD) ||
+      nextAlphaD === Infinity ||
+      Number.isNaN(nextVI) ||
+      nextVI === Infinity ||
+      Number.isNaN(nextVP) ||
+      nextVP === Infinity
     ) {
       return false;
     }
 
     const initialIntegral = {
-      alpha: {
-        s: nextAlphaS,
-        i: nextAlphaI,
-        r,
+      beta: {
+        s: nextBetaS,
+        i: nextBetaI,
+        p,
         d,
       },
-      tau: {
-        s: nextTauS,
+      gamma: {
+        s: nextGammaS,
         i,
-        r: nextTauR,
+        p: nextGammaP,
         d,
       },
-      mu: {
+      alpha: {
         s,
-        i: nextMuI,
-        r: nextMuR,
-        d,
+        i: nextAlphaI,
+        p,
+        d: nextAlphaD,
       },
-      omega: {
+      v: {
         s,
-        i: nextOmegaI,
-        r,
-        d: nextOmegaD,
+        i: nextVI,
+        p: nextVP,
+        d,
       },
     };
 
@@ -246,98 +262,80 @@ export default class LMm {
 
         const s = prevValues.s + this.stepSize * this.ds(ts, prevValues);
         const i = prevValues.i + this.stepSize * this.di(ts, prevValues);
-        const r = prevValues.r + this.stepSize * this.dr(ts, prevValues);
+        const p = prevValues.p + this.stepSize * this.dp(ts, prevValues);
         const d = prevValues.d + this.stepSize * this.dd(ts, prevValues);
 
-        const nextAlphaS =
-          nextPrevValues.alpha.s +
-          this.stepSize * this.nextAlphaDs(0, nextPrevValues.alpha);
-        const nextAlphaI =
-          nextPrevValues.alpha.i +
-          this.stepSize * this.nextAlphaDi(0, nextPrevValues.alpha);
+        const nextBetaS = nextPrevValues.beta.s + this.stepSize * this.nextBetaDs(ts, nextPrevValues.beta);
+        const nextBetaI = nextPrevValues.beta.i + this.stepSize * this.nextBetaDi(ts, nextPrevValues.beta);
 
+        const nextGammaS = nextPrevValues.gamma.s + this.stepSize * this.nextGammaDs(ts, nextPrevValues.gamma);
+        const nextGammaP = nextPrevValues.gamma.p + this.stepSize * this.nextGammaDp(ts, nextPrevValues.gamma);
 
+        const nextAlphaI = nextPrevValues.alpha.i + this.stepSize * this.nextAlphaDi(ts, nextPrevValues.alpha);
+        const nextAlphaD = nextPrevValues.alpha.d + this.stepSize * this.nextAlphaDd(ts, nextPrevValues.alpha);
+
+        const nextVI = nextPrevValues.v.i + this.stepSize * this.nextVDi(ts, nextPrevValues.v);
+        const nextVP = nextPrevValues.v.p + this.stepSize * this.nextVDp(ts, nextPrevValues.v);
         if (
           Number.isNaN(s) ||
           s === Infinity ||
           Number.isNaN(i) ||
           i === Infinity ||
-          Number.isNaN(r) ||
-          r === Infinity ||
+          Number.isNaN(p) ||
+          p === Infinity ||
           Number.isNaN(d) ||
           d === Infinity ||
-          Number.isNaN(nextAlphaS) ||
-          nextAlphaS === Infinity ||
+          Number.isNaN(nextBetaS) ||
+          nextBetaS === Infinity ||
+          Number.isNaN(nextBetaI) ||
+          nextBetaI === Infinity ||
+          Number.isNaN(nextGammaS) ||
+          nextGammaS === Infinity ||
+          Number.isNaN(nextGammaP) ||
+          nextGammaP === Infinity ||
           Number.isNaN(nextAlphaI) ||
           nextAlphaI === Infinity ||
-          Number.isNaN(nextTauS) ||
-          nextTauS === Infinity ||
-          Number.isNaN(nextTauR) ||
-          nextTauR === Infinity ||
-          Number.isNaN(nextMuI) ||
-          nextMuI === Infinity ||
-          Number.isNaN(nextMuR) ||
-          nextMuR === Infinity ||
-          Number.isNaN(nextOmegaI) ||
-          nextOmegaI === Infinity ||
-          Number.isNaN(nextOmegaD) ||
-          nextOmegaD === Infinity
+          Number.isNaN(nextAlphaD) ||
+          nextAlphaD === Infinity ||
+          Number.isNaN(nextVI) ||
+          nextVI === Infinity ||
+          Number.isNaN(nextVP) ||
+          nextVP === Infinity
         ) {
           return false;
         }
 
-        const nextTauS =
-          nextPrevValues.tau.s +
-          this.stepSize * this.nextTauDs(0, nextPrevValues.tau);
-        const nextTauR =
-          nextPrevValues.tau.r +
-          this.stepSize * this.nextTauDr(0, nextPrevValues.tau);
-
-        const nextMuI =
-          nextPrevValues.mu.i +
-          this.stepSize * this.nextMuDi(0, nextPrevValues.mu);
-        const nextMuR =
-          nextPrevValues.mu.r +
-          this.stepSize * this.nextMuDr(0, nextPrevValues.mu);
-
-        const nextOmegaI =
-          nextPrevValues.omega.i +
-          this.stepSize * this.nextOmegaDi(0, nextPrevValues.omega);
-        const nextOmegaD =
-          nextPrevValues.omega.d +
-          this.stepSize * this.nextOmegaDd(0, nextPrevValues.omega);
-
         this.savedEuler[savedLen] = {
           s,
           i,
-          r,
+          p,
           d,
         };
 
         this.nextSavedEuler[savedLen] = {
-          alpha: {
-            s: nextAlphaS,
-            i: nextAlphaI,
-            r,
+          beta: {
+            s: nextBetaS,
+            i: nextBetaI,
+            p,
             d,
           },
-          tau: {
-            s: nextTauS,
+          gamma: {
+            s: nextGammaS,
             i,
-            r: nextTauR,
+            p: nextGammaP,
             d,
           },
-          mu: {
+          alpha: {
             s,
-            i: nextMuI,
-            r: nextMuR,
-            d,
+            i: nextAlphaI,
+            p,
+            d: nextAlphaD,
           },
-          omega: {
+          v: {
             s,
-            i: nextOmegaI,
-            r,
-            d: nextOmegaD,
+            i: nextVI,
+            p: nextVP,
+            d,
           },
         };
       }
@@ -391,7 +389,7 @@ export default class LMm {
     const matrixFunc = this.matrixFunction().transposeView();
     const inverse = inv(identity.add(gradientFunc.mmul(gradientFunc.transposeView())));
 
-    let params = new Matrix([[this.alpha, this.tau, this.mu, this.omega]]);
+    let params = new Matrix([[this.beta, this.gamma, this.alpha, this.v]]);
     params = params.sub(inverse
       .mmul(gradientFunc)
       .mmul(matrixFunc)
@@ -400,9 +398,17 @@ export default class LMm {
 
     const arr = params.to1DArray();
 
-    [this.alpha, this.tau, this.mu, this.omega] = arr;
+
+    [this.beta, this.gamma, this.alpha, this.v] = arr;
   }
   interate() {
+    if (this.resetArgs) {
+      this.resultingArgs = [this.beta, this.gamma, this.alpha, this.v];
+      this.alpha = alpha;
+      this.beta = beta;
+      this.gamma = gamma;
+      this.v = v;
+    }
     const res1 = this.initialTargetEuler();
     const res2 = this.nextInitialTargetEuler();
     if (!res1 || !res2) {
@@ -410,7 +416,7 @@ export default class LMm {
     }
     this.setupGradientAndMatrixAndError();
     const res = this.mainLoop();
-    if (! res) {
+    if (!res) {
       return false;
     }
     return true;
@@ -425,6 +431,7 @@ export default class LMm {
     let res = this.interate();
     let converged = this.error <= this.errorTolerance || !res;
 
+
     let iteration;
     for (
       iteration = 0;
@@ -437,10 +444,13 @@ export default class LMm {
     }
 
     // console.log(this.error, iteration);
-    console.log([this.alpha, this.tau, this.mu, this.omega]);
+    console.log(JSON.stringify({
+      iterations: iteration,
+      error: this.error,
+      args: this.resetArgs ? this.resultingArgs : [this.beta, this.gamma, this.alpha, this.v]}, true, 2));
 
     return {
-      parameterValues: [this.alpha, this.tau, this.mu, this.omega],
+      parameterValues: [this.beta, this.gamma, this.alpha, this.v],
       parameterError: this.error,
       iterations: iteration,
     };
@@ -448,7 +458,7 @@ export default class LMm {
   mainLoop() {
     for (let i = 1; i < this.dataSetLength; i += 1) {
       const res = this.targetEuler(i);
-      if (! res) {
+      if (!res) {
         return false;
       }
     }
@@ -457,30 +467,26 @@ export default class LMm {
 
   /* eslint no-param-reassign: ["error", { "props": false }] */
   plot({
-    context: c, elapsedTime, width, height,
+    context: c, width, height,
   }) {
-    console.log(this.discreteSavedEuler);
-    //   for (let k = 0; k < 4; k += 1) {
-    //     for (let i = 0; i < this.dataSetLength; i += 1) {
-    //       const yVal = this.discreteSavedEuler[i][this.params[k]];
-    //       c.strokeStyle = 'orange';
-    //       c.lineWidth = 1;
-    //       const initialValue = height * (1 - solution(0)[index]);
-    //       c.beginPath();
-    //       c.moveTo(0, initialValue);
-    //       for (let k = 1; k < this.frames.length; k += 1) {
-    //         const vX = k * xSpacing;
-    //         const vY = this.state.sirGraphHeight * (1 - solution(k)[index]);
-    //         c.lineTo(vX, vY);
-    //       }
-    //       c.stroke();
-    //       c.strokeStyle = color;
-    //       c.lineWidth = 5;
-    //       c.stroke();
-    //       c.closePath();
+    if (! this.discreteSavedEuler || ! this.discreteSavedEuler.length) return;
+    for (let k = 0; k < 4; k += 1) {
+      c.strokeStyle = 'orange';
+      c.lineWidth = 5;
 
-    //     }
+      const initialValue = height * (1 - this.discreteSavedEuler[0][this.params[k]]);
 
-    //   }
+      c.beginPath();
+      c.moveTo(0, initialValue);
+
+      for (let i = 1; i < this.discreteSavedEuler.length; i += 1) {
+        const yVal = this.discreteSavedEuler[i][this.params[k]];
+        const vX = k * width / this.discreteSavedEuler.length;
+        const vY = height * (1 - yVal);
+        c.lineTo(vX, vY);
+      }
+      c.stroke();
+      c.closePath();
+    }
   }
 }
