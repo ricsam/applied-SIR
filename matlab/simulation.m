@@ -1,16 +1,6 @@
 clear; clear all; clc;
 
-global this_width;
-global this_height;
-global this_maxSpeed;
-global this_diseaseRadius;
-global this_baseInfectionDuration;
-global this_baseImmunityDuration;
-global this_personRadius;
-global this_numberOfPeople;
-global this_probabilityOfBecommingImmuneElseDie;
-global f;
-global initialNumberOfInfected;
+global this_width this_height this_maxSpeed this_diseaseRadius this_baseInfectionDuration this_baseImmunityDuration this_personRadius this_numberOfPeople this_probabilityOfBecommingImmuneElseDie f initialNumberOfInfected;
 
 this_width = 800;
 this_height = 600;
@@ -69,17 +59,7 @@ end
 
 
 function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix] = getInitialFrame()
-  global this_width;
-  global this_height;
-  global this_maxSpeed;
-  global this_diseaseRadius;
-  global this_baseInfectionDuration;
-  global this_baseImmunityDuration;
-  global this_personRadius;
-  global this_numberOfPeople;
-  global this_probabilityOfBecommingImmuneElseDie;
-  global initialNumberOfInfected;
-
+  global this_width this_height this_maxSpeed this_diseaseRadius this_baseInfectionDuration this_baseImmunityDuration this_personRadius this_numberOfPeople this_probabilityOfBecommingImmuneElseDie initialNumberOfInfected;
 
   xPositions = [];
   yPositions = [];
@@ -112,8 +92,7 @@ function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, n
 end
 
 function cb = effectFuntion(radius)
-  global this_diseaseRadius;
-  global this_personRadius;
+  global this_diseaseRadius this_personRadius;
   if radius == 0
     cb = 0;
   elseif radius >= this_diseaseRadius + this_personRadius
