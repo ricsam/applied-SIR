@@ -420,21 +420,47 @@ export default class LMm {
     return true;
   }
   euler(alpha, tau, mu, omega) {
-    for (let t = 0; t < this.yData.length; t += 1) {
-      for (let _ = stepOffset; _ < this.frameIterations; _ += 1) {
+    let totalDistance = 0;
+    let S = this.yData[0].suceptible;
+    let I = this.yData[0].infected;
+    let R = this.yData[0].immune;
+    let D = this.yData[0].dead;
 
+    for (let t = 0; t < this.yData.length; t += 1) {
+      for (let s = 0; s < this.frameIterations; s += 1) {
+        const args = [t + s * this.stepSize, { S, I, R, D }, { alpha, tau, mu, omega }];
+        S += this.stepSize * this.dS(...args);
+        I += this.stepSize * this.dI(...args);
+        R += this.stepSize * this.dR(...args);
+        D += this.stepSize * this.dD(...args);
+        if (S < 0 || S > 1 || I < 0 || I > 1 || R < 0 || R > 1 || D < 0 || D > 1) {
+          return false;
+        }
       }
+
+      totalDistance += Math.abs(this.yData[t].suceptible - S);
+      totalDistance += Math.abs(this.yData[t].infected - I);
+      totalDistance += Math.abs(this.yData[t].immune - R);
+      totalDistance += Math.abs(this.yData[t].dead - D);
     }
+
+    return totalDistance;
   }
   gradientFunction() {
+    const range = 2;
+    const gradient = 1;
+
     const distances = [];
-    for (let alpha = -10; alpha <= 10; alpha += 1) {
-      for (let tau = -10; tau <= 10; tau += 1) {
-        for (let mu = -10; mu <= 10; mu += 1) {
-          for (let omega = -10; omega <= 10; omega += 1) {
-            distances.push(
-              this.euler(alpha, tau, mu, omega)
-            );
+    for (let alpha = -range; alpha <= range; alpha += gradient) {
+      for (let tau = -range; tau <= range; tau += gradient) {
+        for (let mu = -range; mu <= range; mu += gradient) {
+          for (let omega = -range; omega <= range; omega += gradient) {
+            const distance = this.euler(alpha, tau, mu, omega);
+            if (distance !== false) {
+              distances.push(
+                distance
+              );
+            }
           }
         }
       }
