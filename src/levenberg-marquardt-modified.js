@@ -2,11 +2,6 @@ import { Matrix, inverse as inv } from 'ml-matrix';
 
 const stepSize = 0.5;
 
-const beta = 0.2;
-const gamma = 0.15;
-const v = 0.15;
-const alpha = 0.01;
-
 export default class LMm {
   damping = 0.8;
   gradientDifference = 1e-2;
@@ -17,10 +12,10 @@ export default class LMm {
   stepSize = stepSize;
   frameIterations = Math.round(1 / stepSize);
 
-  alpha = alpha;
-  beta = beta;
-  gamma = gamma;
-  v = v;
+  alpha = 0.2;
+  beta = 0.15;
+  gamma = 0.15;
+  v = 0.01;
 
   resetArgs = false;
 
@@ -28,17 +23,17 @@ export default class LMm {
   params = ['s', 'i', 'p', 'd'];
   args = ['beta', 'gamma', 'v', 'alpha'];
 
-  ds(t, { s, i, p }) {
-    return -this.beta * s * i + this.gamma * p;
+  ds(t, { s, i, p }, beta, gamma, v, alpha) {
+    return -beta * s * i + gamma * p;
   }
-  di(t, { s, i }) {
-    return this.beta * s * i - this.alpha * i - this.v * i;
+  di(t, { s, i }, beta, gamma, v, alpha) {
+    return beta * s * i - alpha * i - v * i;
   }
-  dp(t, { i, p }) {
-    return this.v * i - this.gamma * p;
+  dp(t, { i, p }, beta, gamma, v, alpha) {
+    return v * i - gamma * p;
   }
-  dd(t, { i }) {
-    return this.alpha * i;
+  dd(t, { i }, beta, gamma, v, alpha) {
+    return alpha * i;
   }
 
   // beta
@@ -141,10 +136,10 @@ export default class LMm {
       d: this.d0,
     };
 
-    const s = this.s0 + this.stepSize * this.ds(0, initialData);
-    const i = this.i0 + this.stepSize * this.di(0, initialData);
-    const p = this.p0 + this.stepSize * this.dp(0, initialData);
-    const d = this.d0 + this.stepSize * this.dd(0, initialData);
+    const s = this.s0 + this.stepSize * this.ds(0, initialData, this.beta, this.gamma, this.v, this.alpha);
+    const i = this.i0 + this.stepSize * this.di(0, initialData, this.beta, this.gamma, this.v, this.alpha);
+    const p = this.p0 + this.stepSize * this.dp(0, initialData, this.beta, this.gamma, this.v, this.alpha);
+    const d = this.d0 + this.stepSize * this.dd(0, initialData, this.beta, this.gamma, this.v, this.alpha);
 
     const nextBetaS = this.s0 + this.stepSize * this.nextBetaDs(0, initialData);
     const nextBetaI = this.i0 + this.stepSize * this.nextBetaDi(0, initialData);
@@ -424,8 +419,26 @@ export default class LMm {
 
     return true;
   }
+  euler(alpha, tau, mu, omega) {
+    for (let t = 0; t < this.yData.length; t += 1) {
+      for (let _ = stepOffset; _ < this.frameIterations; _ += 1) {
+
+      }
+    }
+  }
   gradientFunction() {
-    return new Matrix(this.gradientValues);
+    const distances = [];
+    for (let alpha = -10; alpha <= 10; alpha += 1) {
+      for (let tau = -10; tau <= 10; tau += 1) {
+        for (let mu = -10; mu <= 10; mu += 1) {
+          for (let omega = -10; omega <= 10; omega += 1) {
+            distances.push(
+              this.euler(alpha, tau, mu, omega)
+            );
+          }
+        }
+      }
+    }
   }
   matrixFunction() {
     return new Matrix([this.matrixValues]);
@@ -495,37 +508,41 @@ export default class LMm {
       );
     }
 
-    let res = this.interate();
-    let converged = this.error <= this.errorTolerance || !res;
+    // let res = this.interate();
+    // let converged = this.error <= this.errorTolerance || !res;
 
-    let iteration;
-    for (
-      iteration = 0;
-      iteration < this.maxIterations && !converged;
-      iteration += 1
-    ) {
-      this.step();
-      res = this.interate();
-      converged = this.error <= this.errorTolerance || !res;
+    // let iteration;
+    // for (
+    //   iteration = 0;
+    //   iteration < this.maxIterations && !converged;
+    //   iteration += 1
+    // ) {
+    //   this.step();
+    //   res = this.interate();
+    //   converged = this.error <= this.errorTolerance || !res;
+    // }
+    function pad(n, width) {
+      const z = '0';
+      return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
     }
 
+
     // console.log(this.error, iteration);
-    console.log(
-      JSON.stringify(
-        {
-          iterations: iteration,
-          error: this.error,
-          args: [this.beta, this.gamma, this.alpha, this.v],
-        },
-        true,
-        2
-      )
-    );
+    // console.log(
+    //   JSON.stringify(
+    //     {
+    //       iterations: iteration,
+    //       error: this.error,
+    //       args: [this.beta, this.gamma, this.alpha, this.v],
+    //     },
+    //     true,
+    //     2
+    //   )
+    // );
 
     return {
       parameterValues: [this.beta, this.gamma, this.alpha, this.v],
       parameterError: this.error,
-      iterations: iteration,
     };
   }
   mainLoop() {
