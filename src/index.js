@@ -397,7 +397,7 @@ class App extends React.PureComponent {
           LM.setData(graphs[graphKey], this.frames.length);
           LM.calculate();
 
-          console.log(LM.discreteSavedEuler);
+          // console.log(LM.discreteSavedEuler);
         }
         LM.plot({
           context: c,
