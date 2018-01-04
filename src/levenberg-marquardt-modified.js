@@ -46,14 +46,21 @@ export default class LMm {
     return totalDistance;
   }
   gradientFunction() {
-    const range = 2;
-    const gradient = 0.1;
+    const range = 20;
+    const gradient = 1;
+
+    const len = this.yData.length;
+
+    const alphaMid = 0;
+    const tauMid = 0;
+    const muMid = 0;
+    const omegaMid = 0;
 
     const distances = [];
-    for (let alpha = -range; alpha <= range; alpha += gradient) {
-      for (let tau = -range; tau <= range; tau += gradient) {
-        for (let mu = -range; mu <= range; mu += gradient) {
-          for (let omega = -range; omega <= range; omega += gradient) {
+    for (let alpha = -range + alphaMid; alpha <= range + alphaMid; alpha += gradient) {
+      for (let tau = -range + tauMid; tau <= range + tauMid; tau += gradient) {
+        for (let mu = -range + muMid; mu <= range + muMid; mu += gradient) {
+          for (let omega = -range + omegaMid; omega <= range + omegaMid; omega += gradient) {
             const distance = this.euler(alpha, tau, mu, omega);
             if (distance !== false) {
               distances.push(
@@ -64,6 +71,9 @@ export default class LMm {
           }
         }
       }
+    }
+    if ( ! distances.length ) {
+      return;
     }
     const ld = distances.sort((a, b) => a.distance - b.distance)[0];
     console.log(ld);
