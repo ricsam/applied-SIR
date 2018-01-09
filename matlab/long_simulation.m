@@ -1,47 +1,44 @@
+% Program used to run the long simulation with different parameters for the 3D plot. Adapted from visual simulation program without removing several plotting details.
 clear; clear all; clc;
 
-
-global this_width;
-global this_height;
-global this_maxSpeed;
-global this_diseaseRadius;
-global this_baseInfectionDuration;
-global this_baseImmunityDuration;
-global this_personRadius;
-global this_numberOfPeople;
-global this_probabilityOfBecommingImmuneElseDie;
-global this_trainDepartureInterval;
-global this_subways_x;
-global this_subways_y;
-global this_subways_r;
-global this_subways;
-global f;
-global initialNumberOfInfected;
+global this_width this_height this_maxSpeed this_diseaseRadius this_baseInfectionDuration this_baseImmunityDuration this_personRadius this_numberOfPeople this_probabilityOfBecommingImmuneElseDie f initialNumberOfInfected;
 
 this_width = 800;
 this_height = 600;
-this_maxSpeed = 3;
+this_maxSpeed = 1;
 this_diseaseRadius = 10;
-this_baseInfectionDuration = 15;
-this_baseImmunityDuration = 360;
+this_baseInfectionDuration = 1;
+this_baseImmunityDuration = 14;
 this_personRadius = 3;
-this_numberOfPeople = 1200;
-this_probabilityOfBecommingImmuneElseDie = 0.8;
-this_trainDepartureInterval = 40;
-this_subways_x = [200, 600];
-this_subways_y = [300, 300];
-this_subways_r = [100, 100];
-this_subways = [1, 2];
+this_numberOfPeople = 3000;
+this_probabilityOfBecommingImmuneElseDie = 0;
 initialNumberOfInfected = 5;
+iterations = 0;
 
-
-[newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix, newTrainDepartureCountdown, newInversedPredetermied] = getInitialFrame();
-
-f = figure;
-while true
-  render(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix, newTrainDepartureCountdown, newInversedPredetermied);
-  [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix, newTrainDepartureCountdown, newInversedPredetermied] = update(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix, newTrainDepartureCountdown, newInversedPredetermied);
-  pause(1/60);
+pile = [];
+immunityChance = [];
+sickDays = [];
+for this_probabilityOfBecommingImmuneElseDie = 0:0.1:1
+  this_probabilityOfBecommingImmuneElseDie
+  for this_baseInfectionDuration = 1:2:21
+    [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix] = getInitialFrame();
+    this_baseInfectionDuration
+    while true
+      [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix] = update(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix);
+      iterations = iterations + 1;
+      if newInfectionMatrix == 0
+        iterations
+        break
+      elseif iterations > 100000
+        iterations
+        iterations = 0;
+        break
+      end
+    end
+  end
+  pile = [pile sum(newDeathMatrix)];
+  immunityChance = [immunityChance this_probabilityOfBecommingImmuneElseDie];
+  sickDays = [sickDays this_baseInfectionDuration];
 end
 
 function ret = renderMatrix(matrix, newXPositions, newYPositions, c)
@@ -57,54 +54,28 @@ function ret = renderMatrix(matrix, newXPositions, newYPositions, c)
 
     scatter(xPositions(:),yPositions(:),10,c,"filled"); % Plots the filtered coordinates as points.
     hold on;
+    set(gca,'color','black');
 end
 
-function ret = render(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix, newTrainDepartureCountdown, newInversedPredetermied)
+function ret = render(newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix)
     global f;
     clf(f);
     scatter(newXPositions(:), newYPositions(:), 10, 'yellow', 'filled');
     hold on;
 
     renderMatrix(newInfectionMatrix, newXPositions, newYPositions, 'red');
-    renderMatrix(newDeathMatrix, newXPositions, newYPositions, 'black');
+    renderMatrix(newDeathMatrix, newXPositions, newYPositions, 'white');
     renderMatrix(newImmunityMatrix, newXPositions, newYPositions, 'green');
-
-
-
-    % scatter(recovered(:,1),recovered(:,2),10,'b',"filled");
-    % hold on
-    % scatter(infected(:,1),infected(:,2),10,'g',"filled");
-    % hold on
 end
 
-
-
-
-
-function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix, newTrainDepartureCountdown, newInversedPredetermied] = getInitialFrame()
-  global this_width;
-  global this_height;
-  global this_maxSpeed;
-  global this_diseaseRadius;
-  global this_baseInfectionDuration;
-  global this_baseImmunityDuration;
-  global this_personRadius;
-  global this_numberOfPeople;
-  global this_probabilityOfBecommingImmuneElseDie;
-  global this_trainDepartureInterval;
-  global this_subways_x;
-  global this_subways_y;
-  global this_subways_r;
-  global this_subways;
-  global initialNumberOfInfected;
-
+function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix] = getInitialFrame()
+  global this_width this_height this_maxSpeed this_diseaseRadius this_baseInfectionDuration this_baseImmunityDuration this_personRadius this_numberOfPeople this_probabilityOfBecommingImmuneElseDie initialNumberOfInfected;
 
   xPositions = [];
   yPositions = [];
   immunityMatrix = []; % time ticking, of beeing immune
   infectionMatrix = []; % time ticking down, of infection
   deathMatrix = [];
-  inversedPredetermied = [];
 
   for i = 1:this_numberOfPeople - initialNumberOfInfected
     xPositions(end + 1) = getRandomArbitrary(0, this_width);
@@ -112,9 +83,7 @@ function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, n
     immunityMatrix(end + 1) = 0;
     infectionMatrix(end + 1) = 0;
     deathMatrix(end + 1) = false;
-    inversedPredetermied(end + 1) = 0;
   end
-
 
   for i = 1:initialNumberOfInfected
     % push one infected
@@ -123,7 +92,6 @@ function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, n
     immunityMatrix(end + 1) = 0;
     infectionMatrix(end + 1) = this_baseInfectionDuration;
     deathMatrix(end + 1) = false;
-    inversedPredetermied(end + 1) = 0;
   end
 
   newXPositions = xPositions;
@@ -131,13 +99,10 @@ function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, n
   newInfectionMatrix = infectionMatrix;
   newImmunityMatrix = immunityMatrix;
   newDeathMatrix = deathMatrix;
-  newTrainDepartureCountdown = this_trainDepartureInterval;
-  newInversedPredetermied = inversedPredetermied;
 end
 
 function cb = effectFuntion(radius)
-  global this_diseaseRadius;
-  global this_personRadius;
+  global this_diseaseRadius this_personRadius;
   if radius == 0
     cb = 0;
   elseif radius >= this_diseaseRadius + this_personRadius
@@ -157,29 +122,13 @@ function cb = bindY(y)
   cb = min(max(y, 0), this_height);
 end
 
-function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix, newTrainDepartureCountdown, newInversedPredetermied] = update(xPositions, yPositions, infectionMatrix, immunityMatrix, deathMatrix, trainDepartureCountdown, inversedPredetermied)
+function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, newDeathMatrix] = update(xPositions, yPositions, infectionMatrix, immunityMatrix, deathMatrix)
 
-  global this_width;
-  global this_height;
-  global this_maxSpeed;
-  global this_diseaseRadius;
-  global this_baseInfectionDuration;
-  global this_baseImmunityDuration;
-  global this_personRadius;
-  global this_numberOfPeople;
-  global this_probabilityOfBecommingImmuneElseDie;
-  global this_trainDepartureInterval;
-  global this_subways_x;
-  global this_subways_y;
-  global this_subways_r;
-  global this_subways;
+  global this_width this_height this_maxSpeed this_diseaseRadius this_baseInfectionDuration this_baseImmunityDuration this_personRadius this_numberOfPeople this_probabilityOfBecommingImmuneElseDie;
 
   newXPositions = [];
   newYPositions = [];
   newDeathMatrix = [deathMatrix];
-  newInversedPredetermied = [inversedPredetermied];
-
-  newTrainDepartureCountdown = trainDepartureCountdown - 1;
 
   xPositions_length = size(xPositions, 2);
   for i = 1:xPositions_length
@@ -191,81 +140,10 @@ function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, n
 
     x = xPositions(i);
     y = yPositions(i);
-    isPredetermied = false;
-    for k = 1:size(this_subways, 2)
-      subway = this_subways(k);
-
-      subway_r = this_subways_r(subway);
-      subway_x = this_subways_x(subway);
-      subway_y = this_subways_y(subway);
-
-      if sqrt((subway_x - x)^2 + (subway_y - y)^2) < subway_r + this_personRadius
-        if newTrainDepartureCountdown == 0
-          % translate to next station
-
-          if k < size(this_subways, 2)
-            nextStationIndex = k + 1;
-          else
-            nextStationIndex = 1;
-          end
-
-          nextStation = this_subways(nextStationIndex);
-
-          nextStation_x = this_subways_x(nextStation);
-          nextStation_y = this_subways_y(nextStation);
-          nextStation_r = this_subways_r(nextStation);
-
-          translateX = nextStation_x - subway_x;
-          translateY = nextStation_y - subway_y;
-
-
-          newXPositions(i) = bindX(translateX + x);
-          newYPositions(i) = bindY(translateY + y);
-          isPredetermied = true;
-
-          newInversedPredetermied(i) = 40;
-
-          continue; % eslint-disable-line no-continue
-        end
-
-
-        winkel = atan(abs(subway_y - y) / abs(subway_x - x));
-
-        % move in negative x, move negative y */
-        if y >= subway_y && x >= subway_x
-          winkel = winkel + pi;
-        end
-        % move in positive x, negative y */
-        if y >= subway_y && x < subway_x
-          winkel = winkel + pi + pi / 2;
-        end
-
-        % positive x, positive y */
-        if y < subway_y && x < subway_x
-          winkel = winkel + 0;
-        end
-
-        % negative x, positive y */
-        if y < subway_y && x >= subway_x
-          winkel = winkel + pi / 2;
-        end
-
-        if inversedPredetermied(i) > 0
-          newInversedPredetermied(i) = inversedPredetermied(i) - 1;
-          winkel = winkel + pi;
-        end
-
-        newXPositions(i) = bindX(this_maxSpeed * cos(winkel) + x);
-        newYPositions(i) = bindY(this_maxSpeed * sin(winkel) + y);
-        isPredetermied = true;
-      end
-    end
-    if ~isPredetermied
-      winkel = getRandomArbitrary(0, 2 * pi);
-      speed = getRandomArbitrary(0, this_maxSpeed);
-      newXPositions(i) = bindX(speed * cos(winkel) + x);
-      newYPositions(i) = bindY(speed * sin(winkel) + y);
-    end
+    winkel = getRandomArbitrary(0, 2 * pi);
+    speed = getRandomArbitrary(0, this_maxSpeed);
+    newXPositions(i) = bindX(speed * cos(winkel) + x);
+    newYPositions(i) = bindY(speed * sin(winkel) + y);
   end
 
   newImmunityMatrix = [];
@@ -275,10 +153,6 @@ function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, n
     else
       newImmunityMatrix(i) = immunityMatrix(i);
     end
-  end
-
-  if newTrainDepartureCountdown == 0
-    newTrainDepartureCountdown = this_trainDepartureInterval;
   end
 
   % console.log(newXPositions, newYPositions);
