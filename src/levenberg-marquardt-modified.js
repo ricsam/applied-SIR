@@ -14,9 +14,11 @@ export default class LMm {
 
   alpha = false;
 
-  dS = (t, { S, I, R, D }, { alpha, tau, mu, omega }) => -alpha * S * I + tau * R;
+  dS = (t, { S, I, R, D }, { alpha, tau, mu, omega }) => -alpha * S * I + (tau - t) * R;
+  dS0 = (t, { S, I, R, D }, { alpha, tau, mu, omega }) => -alpha * S * I + R;
   dI = (t, { S, I, R, D }, { alpha, tau, mu, omega }) => alpha * S * I - omega * I - mu * I;
-  dR = (t, { S, I, R, D }, { alpha, tau, mu, omega }) => mu * I - tau * R;
+  dR = (t, { S, I, R, D }, { alpha, tau, mu, omega }) => mu * I - (tau - t) * R;
+  dR0 = (t, { S, I, R, D }, { alpha, tau, mu, omega }) => mu * I - R;
   dD = (t, { S, I, R, D }, { alpha, tau, mu, omega }) => omega * I;
   euler(alpha, tau, mu, omega) {
     let totalDistance = 0;
@@ -28,10 +30,15 @@ export default class LMm {
     for (let t = 0; t < this.yData.length; t += 1) {
       for (let s = 0; s < this.frameIterations; s += 1) {
         const args = [t + s * this.stepSize, { S, I, R, D }, { alpha, tau, mu, omega }];
-        S += this.stepSize * this.dS(...args);
         I += this.stepSize * this.dI(...args);
-        R += this.stepSize * this.dR(...args);
         D += this.stepSize * this.dD(...args);
+        if (t >= tau) {
+          R += this.stepSize * this.dR(...args);
+          S += this.stepSize * this.dS(...args);
+        } else {
+          R += this.stepSize * this.dR0(t + s * this.stepSize, { S, I, R: this.yData[0].immune, D }, { alpha, tau, mu, omega });
+          S += this.stepSize * this.dS0(t + s * this.stepSize, { S, I, R: this.yData[0].immune, D }, { alpha, tau, mu, omega });
+        }
         if (S < 0 || S > 1 || I < 0 || I > 1 || R < 0 || R > 1 || D < 0 || D > 1) {
           return false;
         }
@@ -46,8 +53,8 @@ export default class LMm {
     return totalDistance;
   }
   gradientFunction() {
-    const range = 20;
-    const gradient = 1;
+    const range = 10;
+    const gradient = 0.5;
 
     const len = this.yData.length;
 
