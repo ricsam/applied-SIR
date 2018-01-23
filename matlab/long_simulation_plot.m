@@ -7,5 +7,7 @@ infectionDuration = [21:-2:1];
 surf(immunityOrDeath,infectionDuration,pilesOfDead);
 xlabel("Death rate");
 ylabel("Infection duration");
-zlabel("Body count");
+zlabel("Deaths");
 set(gcf,'Toolbar','figure');
+view (2);
+colorbar;

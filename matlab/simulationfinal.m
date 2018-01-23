@@ -118,7 +118,7 @@ function [newXPositions, newYPositions, newInfectionMatrix, newImmunityMatrix, n
   newDeathMatrix = [deathMatrix]; % Updated matrix of dead agents.
 
   xPositions_length = size(xPositions, 2); % Determines size of x-position matrix.
-  % Determines if an agent is dead.
+  % Determines if an agent is dead, and makes it stay in place.
   for i = 1:xPositions_length
     if newDeathMatrix(i) 
       newXPositions(i) = xPositions(i);

@@ -1,10 +1,10 @@
 % Plots the SIR model.
 clc, clear all, close all
-alpha = 0.2; % Encounter rate
-mu = 0.05; % Recovery rate
-tmax = 50; % Last iteration
+alpha = 0.5; % Encounter rate
+mu = 0; % Recovery rate
+tmax = 100; % Last iteration
 dt = 0.01; % Time step
-tau = 2; % Time delay (immunity duration)
+tau = 1; % Time delay (immunity duration)
 omega = 0.1; % Death rate
 
 % Initial values
@@ -24,27 +24,25 @@ pile = [];
 nicePile = [];
 
 % Equations
-dS = @(t,S,I,R) - alpha * S * I + R - omega * I;
-dI = @(t,S,I) alpha * S * I - mu * I;
+dS = @(t,S,I,R) - alpha * S * I + R;
+dI = @(t,S,I) alpha * S * I - mu * I - omega * I;
 dR = @(t,I,R) mu * I - R;
-dD = @(t,S,I,R) 1 - S - I - R;
 S = S0;
 I = I0;
 R = R0;
-D = D0;
 
 for i = 1:length(iterations) - 1
   t = [t (i * dt)];
   if i < tau / dt + 1
-    S(i+1) = S(i) + dt * dS(0,S(i),I(i),R0,I(i));
-    I(i+1) = I(i) + dt * dI(0,S(i),I(i),I(i));
+    S(i+1) = S(i) + dt * dS(0,S(i),I(i),R0);
+    I(i+1) = I(i) + dt * dI(0,S(i),I(i),I(i),I(i));
     R(i+1) = R(i) + dt * dR(0,I(i),R0);
-    D(i+1) = dD(0,S(i),I(i),R0);
+    D(i+1) = 1 - S(i) - I(i) - R(i);
     else
-    S(i+1) = S(i) + dt * dS(0,S(i),I(i),R(i - tau / dt),I(i));
-    I(i+1) = I(i) + dt * dI(0,S(i),I(i),I(i));
+    S(i+1) = S(i) + dt * dS(0,S(i),I(i),R(i - tau / dt));
+    I(i+1) = I(i) + dt * dI(0,S(i),I(i),I(i),I(i));
     R(i+1) = R(i) + dt * dR(0,I(i),R(i - tau / dt));
-    D(i+1) = dD(0,S(i),I(i),R(i));
+    D(i+1) = 1 - S(i) - I(i) - R(i);
     if D(i+1) >= 1
       break
     end
